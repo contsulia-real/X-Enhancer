@@ -395,7 +395,7 @@ function ensureAlgorithmCard() {
     header.className = "xe-algorithm-header";
     const actions = element("div");
     actions.className = "xe-algorithm-actions";
-    const toggle = element("button", "收起");
+    const toggle = element("button", "精简显示");
     toggle.type = "button";
     toggle.setAttribute("aria-expanded", "true");
     actions.append(algorithmLink("官方代码", "https://github.com/xai-org/x-algorithm/blob/main/home-mixer/params/param.rs"), toggle);
@@ -403,7 +403,7 @@ function ensureAlgorithmCard() {
     const body = element("div");
     toggle.addEventListener("click", () => {
       body.hidden = !body.hidden;
-      toggle.textContent = body.hidden ? "展开" : "收起";
+      toggle.textContent = body.hidden ? "展开" : "精简显示";
       toggle.setAttribute("aria-expanded", String(!body.hidden));
     });
     const rulesTitle = element("h3", "X 怎么选帖子");
