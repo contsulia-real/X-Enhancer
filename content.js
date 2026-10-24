@@ -252,10 +252,11 @@ async function algorithmFetch(url, json = false) {
 
 async function loadAlgorithm(rules, weights, updates) {
   const base = "https://github.com/xai-org/x-algorithm";
-  const [sourceResult, readmeResult, commitsResult] = await Promise.allSettled([
+  const [sourceResult, readmeResult, commitsResult, weightCommitsResult] = await Promise.allSettled([
     algorithmFetch("https://raw.githubusercontent.com/xai-org/x-algorithm/main/home-mixer/params/param.rs"),
     algorithmFetch("https://raw.githubusercontent.com/xai-org/x-algorithm/main/README.md"),
-    algorithmFetch("https://api.github.com/repos/xai-org/x-algorithm/commits?per_page=2", true)
+    algorithmFetch("https://api.github.com/repos/xai-org/x-algorithm/commits?per_page=2", true),
+    algorithmFetch("https://api.github.com/repos/xai-org/x-algorithm/commits?path=home-mixer/params/param.rs&per_page=2", true)
   ]);
   updates.replaceChildren();
 
@@ -296,7 +297,15 @@ async function loadAlgorithm(rules, weights, updates) {
   }
 
   if (sourceResult.status === "fulfilled") {
-    const values = new Map([...sourceResult.value.matchAll(/param!\(\s*(\w+)\s*,\s*f64\s*,\s*"[^"]+"\s*,\s*(-?\d+(?:\.\d+)?)\s*\);/g)].map((match) => [match[1], Number(match[2])]));
+    const parseWeights = (source) => new Map([...source.matchAll(/param!\(\s*(\w+)\s*,\s*f64\s*,\s*"[^"]+"\s*,\s*(-?\d+(?:\.\d+)?)\s*\);/g)].map((match) => [
+      match[1], { value: Number(match[2]), line: source.slice(0, match.index).split("\n").length }
+    ]));
+    const values = parseWeights(sourceResult.value);
+    const revisions = weightCommitsResult.status === "fulfilled" ? weightCommitsResult.value : [];
+    const priorSource = Array.isArray(revisions) && revisions[1]
+      ? await algorithmFetch("https://raw.githubusercontent.com/xai-org/x-algorithm/" + revisions[1].sha + "/home-mixer/params/param.rs").catch(() => "")
+      : "";
+    const previous = parseWeights(priorSource);
     const fields = [
       ["FavoriteWeight", "点赞"],
       ["ReplyWeight", "回复"],
@@ -323,15 +332,28 @@ async function loadAlgorithm(rules, weights, updates) {
       primary.className = "xe-algorithm-weights";
       const extra = element("div");
       extra.className = "xe-algorithm-weights";
+      let changed = false;
       fields.forEach(([name, label], index) => {
         const row = element("div");
         row.className = "xe-algorithm-weight";
-        row.append(element("span", label));
-        const amount = element("span", String(values.get(name)));
-        amount.className = values.get(name) < 0 ? "xe-algorithm-negative" : "xe-algorithm-positive";
+        const current = values.get(name);
+        row.append(algorithmLink(label, base + "/blob/main/home-mixer/params/param.rs#L" + current.line));
+        const amount = element("span", String(current.value));
+        amount.className = "xe-algorithm-value " + (current.value < 0 ? "xe-algorithm-negative" : "xe-algorithm-positive");
         row.append(amount);
+        const old = previous.get(name)?.value;
+        if (old !== undefined && old !== current.value) {
+          row.classList.add("xe-algorithm-changed");
+          row.append(element("small", "原 " + old));
+          changed = true;
+        }
         (index < 6 ? primary : extra).append(row);
       });
+      if (changed) {
+        const caption = element("p", "标记的数字与官方上一次修改前相比有变化。");
+        caption.className = "xe-algorithm-explanation";
+        weights.append(caption);
+      }
       weights.append(primary);
       const details = element("details");
       details.append(element("summary", "展开另外 " + (fields.length - 6) + " 项"), extra);
@@ -339,6 +361,14 @@ async function loadAlgorithm(rules, weights, updates) {
     }
   } else {
     weights.textContent = "暂时看不到这些数字";
+  }
+
+  if (weightCommitsResult.status === "fulfilled" && Array.isArray(weightCommitsResult.value)) {
+    const latestWeight = weightCommitsResult.value[0];
+    if (latestWeight) {
+      const date = new Date(latestWeight.commit.author.date).toLocaleDateString("zh-CN");
+      updates.prepend(algorithmLink("权重最近修改：" + date + " · 查看改动", latestWeight.html_url));
+    }
   }
 
   if (commitsResult.status === "fulfilled" && Array.isArray(commitsResult.value)) {
@@ -363,7 +393,19 @@ function ensureAlgorithmCard() {
     algorithmCard.className = "xe-algorithm";
     const header = element("div");
     header.className = "xe-algorithm-header";
-    header.append(element("h2", "X 怎么推荐帖子"), algorithmLink("官方代码", "https://github.com/xai-org/x-algorithm"));
+    const actions = element("div");
+    actions.className = "xe-algorithm-actions";
+    const toggle = element("button", "收起");
+    toggle.type = "button";
+    toggle.setAttribute("aria-expanded", "true");
+    actions.append(algorithmLink("官方代码", "https://github.com/xai-org/x-algorithm/blob/main/home-mixer/params/param.rs"), toggle);
+    header.append(element("h2", "X 怎么推荐帖子"), actions);
+    const body = element("div");
+    toggle.addEventListener("click", () => {
+      body.hidden = !body.hidden;
+      toggle.textContent = body.hidden ? "展开" : "收起";
+      toggle.setAttribute("aria-expanded", String(!body.hidden));
+    });
     const rulesTitle = element("h3", "X 怎么选帖子");
     const rules = element("div", "正在读取…");
     const weightsTitle = element("h3", "哪些行为影响推荐");
@@ -373,13 +415,23 @@ function ensureAlgorithmCard() {
     updates.className = "xe-algorithm-updates";
     const rulesBlock = element("div");
     rulesBlock.className = "xe-algorithm-block";
-    rulesBlock.append(rulesTitle, rules, weightsTitle, weights);
+    const explanation = element("p", "X 会预测用户看到帖子后是否会点赞、回复等，再用这些数字参与排序；并不是发生一次就加这么多分。");
+    explanation.className = "xe-algorithm-explanation";
+    const guidanceTitle = element("h3", "这对发帖意味着什么");
+    const guidance = element("ul");
+    [
+      "更看重：用户可能回复、分享，或关注作者。",
+      "相对较弱：用户可能只是点赞或转发。",
+      "明显不利：用户可能选择不感兴趣、静音或举报。"
+    ].forEach((item) => guidance.append(element("li", item)));
+    rulesBlock.append(rulesTitle, rules, weightsTitle, explanation, weights, guidanceTitle, guidance);
     const updatesBlock = element("div");
     updatesBlock.className = "xe-algorithm-block";
     updatesBlock.append(updatesTitle, updates);
-    const note = element("p", "这些数字用来帮助 X 排序，并不是点赞、回复的直接加分，也算不出实际浏览量。");
+    const note = element("p", "一次举报不等于抵掉几百次点赞。这里显示的是官方默认值，实际推荐还受预测概率、过滤规则和实验设置影响，也算不出真实流量。");
     note.className = "xe-algorithm-note";
-    algorithmCard.append(header, rulesBlock, updatesBlock, note);
+    body.append(rulesBlock, updatesBlock, note);
+    algorithmCard.append(header, body);
     loadAlgorithm(rules, weights, updates);
   }
 

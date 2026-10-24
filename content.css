@@ -52,6 +52,10 @@
 .xe-history-meta button:hover { text-decoration: underline; }
 .xe-algorithm { margin: 16px 0; border: 1px solid rgba(128,128,128,.38); border-radius: 16px; overflow: hidden; color: inherit; font-family: inherit; font-size: 14px; }
 .xe-algorithm-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; }
+.xe-algorithm-actions { display: flex; align-items: center; gap: 12px; flex: none; font-size: 13px; }
+.xe-algorithm-actions button { padding: 0; border: 0; background: transparent; color: #1d9bf0; font: inherit; cursor: pointer; }
+.xe-algorithm-actions button:hover { text-decoration: underline; }
+.xe-algorithm > div[hidden] { display: none; }
 .xe-algorithm h2 { margin: 0; font-size: 20px; font-weight: 800; line-height: 1.4; }
 .xe-algorithm h3 { margin: 0 0 12px; font-size: 15px; font-weight: 800; }
 .xe-algorithm a { color: #1d9bf0; text-decoration: none; }
@@ -62,7 +66,10 @@
 .xe-algorithm li + li { margin-top: 4px; }
 .xe-algorithm-weights { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 10px 14px; }
 .xe-algorithm-weight { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 13px; }
-.xe-algorithm-weight span:last-child { font-size: 16px; font-weight: 700; }
+.xe-algorithm-weight .xe-algorithm-value { font-size: 16px; font-weight: 700; }
+.xe-algorithm-weight small { color: #71767b; font-size: 12px; }
+.xe-algorithm-changed { padding: 5px 6px; margin: -5px -6px; border-radius: 6px; background: rgba(128,128,128,.13); }
+.xe-algorithm-explanation { margin: 0 0 12px; color: #71767b; font-size: 12px; line-height: 1.5; }
 .xe-algorithm-positive { color: #00ba7c; }
 .xe-algorithm-negative { color: #f4212e; }
 .xe-algorithm details { margin-top: 12px; }
