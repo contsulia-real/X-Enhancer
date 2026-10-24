@@ -259,6 +259,8 @@ async function loadAlgorithm(rules, weights, updates) {
     algorithmFetch("https://api.github.com/repos/xai-org/x-algorithm/commits?path=home-mixer/params/param.rs&per_page=2", true)
   ]);
   updates.replaceChildren();
+  const weightChanges = [];
+  let previousWeightsAvailable = false;
 
   if (readmeResult.status === "fulfilled") {
     const readme = readmeResult.value;
@@ -306,6 +308,7 @@ async function loadAlgorithm(rules, weights, updates) {
       ? await algorithmFetch("https://raw.githubusercontent.com/xai-org/x-algorithm/" + revisions[1].sha + "/home-mixer/params/param.rs").catch(() => "")
       : "";
     const previous = parseWeights(priorSource);
+    previousWeightsAvailable = previous.size > 0;
     const fields = [
       ["FavoriteWeight", "点赞"],
       ["ReplyWeight", "回复"],
@@ -322,7 +325,7 @@ async function loadAlgorithm(rules, weights, updates) {
       ["BlockAuthorWeight", "屏蔽作者"],
       ["MuteAuthorWeight", "静音作者"],
       ["ReportWeight", "举报"],
-      ["BidirectionalFollowReplyWeightBoost", "互相关注时的回复"]
+      ["BidirectionalFollowReplyWeightBoost", "互关原创帖回复加成"]
     ];
     if (fields.some(([name]) => !values.has(name))) {
       weights.textContent = "这次没能读全这些数字";
@@ -335,6 +338,7 @@ async function loadAlgorithm(rules, weights, updates) {
       const compact = element("div");
       compact.className = "xe-algorithm-weights xe-algorithm-compact-weights";
       let changed = false;
+      const formatWeight = (value) => String(Number(value.toFixed(6)));
       fields.forEach(([name, label], index) => {
         const row = element("div");
         row.className = "xe-algorithm-weight";
@@ -343,14 +347,26 @@ async function loadAlgorithm(rules, weights, updates) {
         const amount = element("span", String(current.value));
         amount.className = "xe-algorithm-value " + (current.value < 0 ? "xe-algorithm-negative" : "xe-algorithm-positive");
         row.append(amount);
+        if (name === "ReplyWeight") {
+          const boost = values.get("BidirectionalFollowReplyWeightBoost")?.value;
+          if (boost !== undefined) row.append(element("small", "互关原创帖另加 " + (boost > 0 ? "+" : "") + formatWeight(boost) + "（合计 " + formatWeight(current.value + boost) + "）"));
+        }
         const old = previous.get(name)?.value;
         if (old !== undefined && old !== current.value) {
           row.classList.add("xe-algorithm-changed");
-          row.append(element("small", "原 " + old));
+          const delta = current.value - old;
+          let direction;
+          if (old < 0 && current.value < 0) direction = delta < 0 ? "惩罚加重" : "惩罚减轻";
+          else if (old < 0 && current.value >= 0) direction = "由负转正";
+          else if (old >= 0 && current.value < 0) direction = "由正转负";
+          else direction = delta > 0 ? "提高" : "降低";
+          const deltaText = (delta > 0 ? "+" : "") + formatWeight(delta);
+          row.append(element("small", formatWeight(old) + " → " + formatWeight(current.value) + "（" + direction + " " + deltaText + "）"));
+          weightChanges.push(label + " " + formatWeight(old) + "→" + formatWeight(current.value) + "（" + direction + " " + deltaText + "）");
           changed = true;
         }
         (index < 6 ? primary : extra).append(row);
-        if (["FavoriteWeight", "ReplyWeight", "ShareViaCopyLinkWeight", "NotInterestedWeight", "MuteAuthorWeight", "ReportWeight"].includes(name)) {
+        if (["FavoriteWeight", "ReplyWeight", "ShareViaCopyLinkWeight", "FollowAuthorWeight", "NotInterestedWeight", "MuteAuthorWeight", "ReportWeight"].includes(name)) {
           compact.append(row.cloneNode(true));
         }
       });
@@ -385,6 +401,13 @@ async function loadAlgorithm(rules, weights, updates) {
   } else {
     updates.prepend(element("div", "暂时看不到最新更新"));
   }
+
+  if (previousWeightsAvailable) {
+    const summary = element("div");
+    summary.className = "xe-algorithm-weight-change-summary";
+    summary.append(element("strong", "默认权重变化："), element("span", weightChanges.length ? weightChanges.join("；") : "最近两个版本的默认权重数值没有变化。"));
+    updates.prepend(summary);
+  }
 }
 
 function ensureAlgorithmCard() {
@@ -403,13 +426,22 @@ function ensureAlgorithmCard() {
     const toggle = element("button", "精简显示");
     toggle.type = "button";
     toggle.setAttribute("aria-pressed", "false");
+    toggle.disabled = true;
     actions.append(algorithmLink("官方代码", "https://github.com/xai-org/x-algorithm/blob/main/home-mixer/params/param.rs"), toggle);
     header.append(element("h2", "X 怎么推荐帖子"), actions);
     const body = element("div");
+    chrome.storage.local.get("algorithmCompact", ({ algorithmCompact = false }) => {
+      const compact = algorithmCompact === true;
+      algorithmCard.classList.toggle("xe-algorithm-compact", compact);
+      toggle.textContent = compact ? "完整显示" : "精简显示";
+      toggle.setAttribute("aria-pressed", String(compact));
+      toggle.disabled = false;
+    });
     toggle.addEventListener("click", () => {
       const compact = algorithmCard.classList.toggle("xe-algorithm-compact");
       toggle.textContent = compact ? "完整显示" : "精简显示";
       toggle.setAttribute("aria-pressed", String(compact));
+      chrome.storage.local.set({ algorithmCompact: compact });
     });
     const rulesTitle = element("h3", "X 怎么选帖子");
     rulesTitle.className = "xe-algorithm-full-only";
@@ -430,9 +462,9 @@ function ensureAlgorithmCard() {
     const guidance = element("ul");
     guidance.className = "xe-algorithm-full-only";
     [
-      "更看重：用户可能回复、分享，或关注作者。",
-      "相对较弱：用户可能只是点赞或转发。",
-      "明显不利：用户可能选择不感兴趣、静音或举报。"
+      "更受重视：用户可能回复、引用、私信分享或复制链接分享；互相关注用户回复原创帖还会获得额外加权。",
+      "相对较弱：用户可能只是点赞或普通转发。",
+      "明显不利：用户可能选择不感兴趣、静音、屏蔽或举报。"
     ].forEach((item) => guidance.append(element("li", item)));
     rulesBlock.append(rulesTitle, rules, weightsTitle, explanation, weights, guidanceTitle, guidance);
     const updatesBlock = element("div");
