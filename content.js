@@ -280,18 +280,12 @@ async function loadAlgorithm(rules, weights, updates, changes) {
     const section = readme.match(/## Notable Updates\s*\n([\s\S]*?)\n---/);
     const notices = section ? [...section[1].matchAll(/### ([^\n]+)\n([\s\S]*?)(?=\n### |$)/g)].slice(0, 2) : [];
     for (const [, date, body] of notices) {
-      const descriptions = [
-        ["Under the Hood", "账号状态报告现在会说明：帖子是否因为法律要求，在某些地方被限制展示。"],
-        ["How weights work", "官方解释了点赞、举报等数字的意思，不能简单理解成几次点赞抵一次举报。"],
-        ["Brazil 2026 Elections", "巴西选举期间，部分账号的帖子不会被推荐给未关注他们的人。"]
-      ].filter(([term]) => body.includes(term)).map(([, description]) => description);
-      if (!descriptions.length) continue;
       const item = element("div");
       item.className = "xe-algorithm-update";
       const anchor = date.toLowerCase().replace(/,/g, "").replace(/\s+/g, "-");
       const day = new Date(date.replace(/(\d+)(st|nd|rd|th)/, "$1")).toLocaleDateString("zh-CN");
       item.append(algorithmLink(day + " · 官方重要更新", base + "#" + anchor));
-      item.append(element("p", descriptions.join(" ")));
+      item.append(element("p", body.trim()));
       updates.append(item);
     }
   } else {

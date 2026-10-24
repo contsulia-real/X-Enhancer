@@ -91,5 +91,5 @@
 .xe-algorithm-updates { display: grid; gap: 12px; }
 .xe-algorithm-weight-change-summary { color: #71767b; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
 .xe-algorithm-update { min-width: 0; line-height: 1.4; }
-.xe-algorithm-update p { margin: 4px 0 0; color: #71767b; font-size: 12px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.xe-algorithm-update p { margin: 4px 0 0; color: #71767b; font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .xe-algorithm-note { margin: 14px 0 0; padding: 12px 0 0; border-top: 1px solid rgba(128,128,128,.25); color: #71767b; font-size: 12px; line-height: 1.5; }
