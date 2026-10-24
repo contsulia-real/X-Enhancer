@@ -262,11 +262,11 @@ async function loadAlgorithm(rules, weights, updates) {
   if (readmeResult.status === "fulfilled") {
     const readme = readmeResult.value;
     const ruleDescriptions = [
-      ["Final Score", "根据预测互动概率加权排序，并非累计真实点赞数"],
-      ["Author Diversity", "同一作者的后续帖子会受到衰减"],
-      ["Out-of-Network Discount", "来自未关注账号的部分内容会被折扣"],
-      ["New-Author Boost", "符合条件的低曝光作者可获得推荐提升"],
-      ["PreviouslySeenPostsFilter", "已经看过的帖子会被过滤"]
+      ["Final Score", "X 会猜别人是否想点赞、回复或继续看，再决定推荐什么"],
+      ["Author Diversity", "同一个人连续出现太多次，后面的帖子会排得更靠后"],
+      ["Out-of-Network Discount", "没关注的账号，部分帖子会更难排到前面"],
+      ["New-Author Boost", "一些曝光较少的新作者，会得到额外推荐机会"],
+      ["PreviouslySeenPostsFilter", "已经看过的帖子，通常不会再推荐给你"]
     ];
     const ruleList = element("ul");
     for (const [term, description] of ruleDescriptions) {
@@ -277,19 +277,22 @@ async function loadAlgorithm(rules, weights, updates) {
     const section = readme.match(/## Notable Updates\s*\n([\s\S]*?)\n---/);
     const notices = section ? [...section[1].matchAll(/### ([^\n]+)\n([\s\S]*?)(?=\n### |$)/g)].slice(0, 2) : [];
     for (const [, date, body] of notices) {
-      const first = body.match(/^- (.+)$/m)?.[1];
-      if (!first) continue;
-      const summary = first.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").replace(/[*\x60]/g, "");
+      const descriptions = [
+        ["Under the Hood", "账号状态报告现在会说明：帖子是否因为法律要求，在某些地方被限制展示。"],
+        ["How weights work", "官方解释了点赞、举报等数字的意思，不能简单理解成几次点赞抵一次举报。"],
+        ["Brazil 2026 Elections", "巴西选举期间，部分账号的帖子不会被推荐给未关注他们的人。"]
+      ].filter(([term]) => body.includes(term)).map(([, description]) => description);
+      if (!descriptions.length) continue;
       const item = element("div");
       item.className = "xe-algorithm-update";
       const anchor = date.toLowerCase().replace(/,/g, "").replace(/\s+/g, "-");
-      item.append(algorithmLink("重要更新 · " + date, base + "#" + anchor));
-      const description = element("p", summary);
-      item.append(description);
+      const day = new Date(date.replace(/(\d+)(st|nd|rd|th)/, "$1")).toLocaleDateString("zh-CN");
+      item.append(algorithmLink(day + " · 官方重要更新", base + "#" + anchor));
+      item.append(element("p", descriptions.join(" ")));
       updates.append(item);
     }
   } else {
-    rules.textContent = "无法读取公开规则";
+    rules.textContent = "暂时看不到推荐规则";
   }
 
   if (sourceResult.status === "fulfilled") {
@@ -302,7 +305,7 @@ async function loadAlgorithm(rules, weights, updates) {
       ["ShareWeight", "分享"],
       ["ShareViaDmWeight", "私信分享"],
       ["ShareViaCopyLinkWeight", "复制链接"],
-      ["DwellWeight", "停留"],
+      ["DwellWeight", "看帖停留"],
       ["ClickWeight", "打开帖子"],
       ["OpenLinkWeight", "打开链接"],
       ["FollowAuthorWeight", "关注作者"],
@@ -310,10 +313,10 @@ async function loadAlgorithm(rules, weights, updates) {
       ["BlockAuthorWeight", "屏蔽作者"],
       ["MuteAuthorWeight", "静音作者"],
       ["ReportWeight", "举报"],
-      ["BidirectionalFollowReplyWeightBoost", "互关回复提升"]
+      ["BidirectionalFollowReplyWeightBoost", "互相关注时的回复"]
     ];
     if (fields.some(([name]) => !values.has(name))) {
-      weights.textContent = "公开权重参数未能完整读取";
+      weights.textContent = "这次没能读全这些数字";
     } else {
       weights.replaceChildren();
       const primary = element("div");
@@ -331,23 +334,21 @@ async function loadAlgorithm(rules, weights, updates) {
       });
       weights.append(primary);
       const details = element("details");
-      details.append(element("summary", "其余 " + (fields.length - 6) + " 项权重"), extra);
+      details.append(element("summary", "展开另外 " + (fields.length - 6) + " 项"), extra);
       weights.append(details);
     }
   } else {
-    weights.textContent = "无法读取公开权重";
+    weights.textContent = "暂时看不到这些数字";
   }
 
   if (commitsResult.status === "fulfilled" && Array.isArray(commitsResult.value)) {
-    for (const commit of commitsResult.value.reverse()) {
-      const item = element("div");
-      item.className = "xe-algorithm-update";
-      const date = new Date(commit.commit.author.date).toLocaleDateString("zh-CN");
-      item.append(algorithmLink("源码提交 · " + date + " · " + commit.sha.slice(0, 7), commit.html_url));
-      updates.prepend(item);
+    const latest = commitsResult.value[0];
+    if (latest) {
+      const date = new Date(latest.commit.author.date).toLocaleDateString("zh-CN");
+      updates.prepend(algorithmLink("最近一次代码更新：" + date + " · 查看改动", latest.html_url));
     }
   } else {
-    updates.prepend(element("div", "无法读取最新源码提交"));
+    updates.prepend(element("div", "暂时看不到最新更新"));
   }
 }
 
@@ -362,12 +363,12 @@ function ensureAlgorithmCard() {
     algorithmCard.className = "xe-algorithm";
     const header = element("div");
     header.className = "xe-algorithm-header";
-    header.append(element("h2", "X 推荐算法"), algorithmLink("源码", "https://github.com/xai-org/x-algorithm"));
-    const rulesTitle = element("h3", "公开规则");
+    header.append(element("h2", "X 怎么推荐帖子"), algorithmLink("官方代码", "https://github.com/xai-org/x-algorithm"));
+    const rulesTitle = element("h3", "X 怎么选帖子");
     const rules = element("div", "正在读取…");
-    const weightsTitle = element("h3", "行为权重");
+    const weightsTitle = element("h3", "哪些行为影响推荐");
     const weights = element("div", "正在读取…");
-    const updatesTitle = element("h3", "算法更新");
+    const updatesTitle = element("h3", "最近改了什么");
     const updates = element("div", "正在读取…");
     updates.className = "xe-algorithm-updates";
     const rulesBlock = element("div");
@@ -376,7 +377,7 @@ function ensureAlgorithmCard() {
     const updatesBlock = element("div");
     updatesBlock.className = "xe-algorithm-block";
     updatesBlock.append(updatesTitle, updates);
-    const note = element("p", "权重针对模型预测行为，不能直接换算为点赞数或实际曝光量。");
+    const note = element("p", "这些数字用来帮助 X 排序，并不是点赞、回复的直接加分，也算不出实际浏览量。");
     note.className = "xe-algorithm-note";
     algorithmCard.append(header, rulesBlock, updatesBlock, note);
     loadAlgorithm(rules, weights, updates);
