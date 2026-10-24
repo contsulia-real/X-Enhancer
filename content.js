@@ -332,6 +332,8 @@ async function loadAlgorithm(rules, weights, updates) {
       primary.className = "xe-algorithm-weights";
       const extra = element("div");
       extra.className = "xe-algorithm-weights";
+      const compact = element("div");
+      compact.className = "xe-algorithm-weights xe-algorithm-compact-weights";
       let changed = false;
       fields.forEach(([name, label], index) => {
         const row = element("div");
@@ -348,6 +350,9 @@ async function loadAlgorithm(rules, weights, updates) {
           changed = true;
         }
         (index < 6 ? primary : extra).append(row);
+        if (["FavoriteWeight", "ReplyWeight", "ShareViaCopyLinkWeight", "NotInterestedWeight", "MuteAuthorWeight", "ReportWeight"].includes(name)) {
+          compact.append(row.cloneNode(true));
+        }
       });
       if (changed) {
         const caption = element("p", "标记的数字与官方上一次修改前相比有变化。");
@@ -357,7 +362,7 @@ async function loadAlgorithm(rules, weights, updates) {
       weights.append(primary);
       const details = element("details");
       details.append(element("summary", "展开另外 " + (fields.length - 6) + " 项"), extra);
-      weights.append(details);
+      weights.append(details, compact);
     }
   } else {
     weights.textContent = "暂时看不到这些数字";
@@ -397,19 +402,22 @@ function ensureAlgorithmCard() {
     actions.className = "xe-algorithm-actions";
     const toggle = element("button", "精简显示");
     toggle.type = "button";
-    toggle.setAttribute("aria-expanded", "true");
+    toggle.setAttribute("aria-pressed", "false");
     actions.append(algorithmLink("官方代码", "https://github.com/xai-org/x-algorithm/blob/main/home-mixer/params/param.rs"), toggle);
     header.append(element("h2", "X 怎么推荐帖子"), actions);
     const body = element("div");
     toggle.addEventListener("click", () => {
-      body.hidden = !body.hidden;
-      toggle.textContent = body.hidden ? "展开" : "精简显示";
-      toggle.setAttribute("aria-expanded", String(!body.hidden));
+      const compact = algorithmCard.classList.toggle("xe-algorithm-compact");
+      toggle.textContent = compact ? "完整显示" : "精简显示";
+      toggle.setAttribute("aria-pressed", String(compact));
     });
     const rulesTitle = element("h3", "X 怎么选帖子");
+    rulesTitle.className = "xe-algorithm-full-only";
     const rules = element("div", "正在读取…");
+    rules.className = "xe-algorithm-full-only";
     const weightsTitle = element("h3", "哪些行为影响推荐");
     const weights = element("div", "正在读取…");
+    weights.className = "xe-algorithm-weight-list";
     const updatesTitle = element("h3", "最近改了什么");
     const updates = element("div", "正在读取…");
     updates.className = "xe-algorithm-updates";
@@ -418,7 +426,9 @@ function ensureAlgorithmCard() {
     const explanation = element("p", "X 会预测用户看到帖子后是否会点赞、回复等，再用这些数字参与排序；并不是发生一次就加这么多分。");
     explanation.className = "xe-algorithm-explanation";
     const guidanceTitle = element("h3", "这对发帖意味着什么");
+    guidanceTitle.className = "xe-algorithm-full-only";
     const guidance = element("ul");
+    guidance.className = "xe-algorithm-full-only";
     [
       "更看重：用户可能回复、分享，或关注作者。",
       "相对较弱：用户可能只是点赞或转发。",
@@ -426,10 +436,10 @@ function ensureAlgorithmCard() {
     ].forEach((item) => guidance.append(element("li", item)));
     rulesBlock.append(rulesTitle, rules, weightsTitle, explanation, weights, guidanceTitle, guidance);
     const updatesBlock = element("div");
-    updatesBlock.className = "xe-algorithm-block";
+    updatesBlock.className = "xe-algorithm-block xe-algorithm-full-only";
     updatesBlock.append(updatesTitle, updates);
     const note = element("p", "一次举报不等于抵掉几百次点赞。这里显示的是官方默认值，实际推荐还受预测概率、过滤规则和实验设置影响，也算不出真实流量。");
-    note.className = "xe-algorithm-note";
+    note.className = "xe-algorithm-note xe-algorithm-full-only";
     body.append(rulesBlock, updatesBlock, note);
     algorithmCard.append(header, body);
     loadAlgorithm(rules, weights, updates);

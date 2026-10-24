@@ -55,7 +55,10 @@
 .xe-algorithm-actions { display: flex; align-items: center; gap: 12px; flex: none; font-size: 13px; }
 .xe-algorithm-actions button { padding: 0; border: 0; background: transparent; color: #1d9bf0; font: inherit; cursor: pointer; }
 .xe-algorithm-actions button:hover { text-decoration: underline; }
-.xe-algorithm > div[hidden] { display: none; }
+.xe-algorithm-compact .xe-algorithm-full-only { display: none; }
+.xe-algorithm-compact .xe-algorithm-block > h3 { margin-top: 0; }
+.xe-algorithm-compact .xe-algorithm-weight-list > .xe-algorithm-weights:not(.xe-algorithm-compact-weights),
+.xe-algorithm-compact .xe-algorithm-weight-list > details { display: none; }
 .xe-algorithm h2 { margin: 0; font-size: 20px; font-weight: 800; line-height: 1.4; }
 .xe-algorithm h3 { margin: 0 0 12px; font-size: 15px; font-weight: 800; }
 .xe-algorithm a { color: #1d9bf0; text-decoration: none; }
@@ -65,6 +68,8 @@
 .xe-algorithm ul { margin: 0; padding-left: 19px; line-height: 1.6; }
 .xe-algorithm li + li { margin-top: 4px; }
 .xe-algorithm-weights { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 10px 14px; }
+.xe-algorithm-compact-weights { display: none; }
+.xe-algorithm-compact .xe-algorithm-compact-weights { display: grid; }
 .xe-algorithm-weight { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 13px; }
 .xe-algorithm-weight .xe-algorithm-value { font-size: 16px; font-weight: 700; }
 .xe-algorithm-weight small { color: #71767b; font-size: 12px; }
