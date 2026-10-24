@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "X Enhancer",
+  "version": "0.1.0",
+  "description": "为 X 增加浏览历史：记录主动打开的帖子，按账号分别保存，支持搜索与删除。",
+  "content_scripts": [
+    {
+      "matches": ["https://x.com/*"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "background": { "service_worker": "background.js" }
+}

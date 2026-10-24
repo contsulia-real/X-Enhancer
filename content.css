@@ -1,0 +1,52 @@
+.xe-history-tabs { display: flex !important; position: relative; }
+.xe-history-tabs > * { flex: 1 1 0 !important; width: 0 !important; min-width: 0 !important; }
+.xe-history-tab-slot { display: flex; justify-content: stretch; }
+.xe-history-tab {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  min-height: 52px;
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  color: #71767b;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+}
+.xe-history-tab:hover { background: rgba(128,128,128,.12); }
+.xe-history-tabs.xe-viewing::before { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: var(--xe-bg); z-index: 2; pointer-events: none; }
+.xe-history-tabs.xe-viewing [role="tab"]:not(.xe-history-tab), .xe-history-tabs.xe-viewing [role="tab"]:not(.xe-history-tab) * { color: #71767b !important; }
+.xe-history-tab[aria-selected="true"] { color: inherit; }
+.xe-history-indicator {
+  display: none;
+  position: absolute;
+  bottom: 0;
+  width: 64px;
+  height: 4px;
+  border-radius: 999px;
+  background: #1d9bf0;
+  z-index: 3;
+}
+.xe-history-tab[aria-selected="true"] .xe-history-indicator { display: block; }
+.xe-history-host.xe-history-viewing > .xe-history-anchor ~ :not(.xe-history) { display: none !important; }
+.xe-history {
+  width: 100%;
+  background: inherit;
+  color: inherit;
+  font-family: inherit;
+}
+.xe-history[hidden] { display: none; }
+.xe-history-tools { display: flex; align-items: center; gap: 12px; padding: 12px 16px; }
+.xe-history-tools input { box-sizing: border-box; flex: 1; min-width: 0; width: auto; margin: 0; border: 1px solid rgba(128,128,128,.45); border-radius: 999px; background: transparent; color: inherit; font: inherit; padding: 12px 16px; }
+.xe-history-tools button { flex: none; padding: 8px 0; border: 0; background: transparent; color: #1d9bf0; font: inherit; cursor: pointer; }
+.xe-history-tools button:hover { text-decoration: underline; }
+.xe-history .xe-empty { padding: 28px 16px; color: #71767b; text-align: center; }
+.xe-history-entry { border-top: 1px solid rgba(128,128,128,.25); }
+.xe-history-entry > article { width: 100%; }
+.xe-history-meta { display: flex; justify-content: flex-end; align-items: center; padding: 4px 16px 8px 68px; gap: 12px; font-size: 12px; color: #71767b; }
+.xe-history-meta button { background: none; border: 0; padding: 4px 0; color: inherit; font: inherit; cursor: pointer; }
+.xe-history-meta button:hover { text-decoration: underline; }
