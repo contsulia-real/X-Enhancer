@@ -127,7 +127,7 @@ async function renderHistory() {
   const account = accountName();
   displayedAccount = account;
   if (!account) {
-    const notice = element("div", "未识别当前 X 账号");
+    const notice = element("div", "未识别当前 𝕏 账号");
     notice.className = "xe-empty";
     list.append(notice);
     return;
@@ -265,7 +265,7 @@ async function loadAlgorithm(rules, weights, updates, changes) {
   if (readmeResult.status === "fulfilled") {
     const readme = readmeResult.value;
     const ruleDescriptions = [
-      ["Final Score", "X 会猜别人是否想点赞、回复或继续看，再决定推荐什么"],
+      ["Final Score", "𝕏 会猜别人是否想点赞、回复或继续看，再决定推荐什么"],
       ["Author Diversity", "同一个人连续出现太多次，后面的帖子会排得更靠后"],
       ["Out-of-Network Discount", "没关注的账号，部分帖子会更难排到前面"],
       ["New-Author Boost", "一些曝光较少的新作者，会得到额外推荐机会"],
@@ -433,9 +433,9 @@ function ensureAlgorithmCard() {
     toggle.setAttribute("aria-pressed", "false");
     toggle.disabled = true;
     actions.append(algorithmLink("官方代码", "https://github.com/xai-org/x-algorithm/blob/main/home-mixer/params/param.rs"), toggle);
-    header.append(element("h2", "X 怎么推荐帖子"), actions);
+    header.append(element("h2", "𝕏 怎么推荐帖子"), actions);
     const body = element("div");
-    const rulesTitle = element("h3", "X 怎么选帖子");
+    const rulesTitle = element("h3", "𝕏 怎么选帖子");
     const rules = element("div", "正在读取…");
     const rulesBlock = element("div");
     rulesBlock.className = "xe-algorithm-block";
@@ -451,7 +451,7 @@ function ensureAlgorithmCard() {
     const weightsBlock = element("div");
     weightsBlock.className = "xe-algorithm-block";
     const weightsTitle = element("h3", "哪些行为影响推荐");
-    const explanation = element("p", "X 会预测用户看到帖子后是否会点赞、回复等，再用这些数字参与排序；并不是发生一次就加这么多分。");
+    const explanation = element("p", "𝕏 会预测用户看到帖子后是否会点赞、回复等，再用这些数字参与排序；并不是发生一次就加这么多分。");
     explanation.className = "xe-algorithm-explanation";
     const changes = element("div", "正在对比权重…");
     changes.className = "xe-algorithm-changes";
