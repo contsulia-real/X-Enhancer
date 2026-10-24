@@ -250,7 +250,7 @@ async function algorithmFetch(url, json = false) {
   return json ? response.json() : response.text();
 }
 
-async function loadAlgorithm(rules, weights, updates) {
+async function loadAlgorithm(rules, weights, updates, changes) {
   const base = "https://github.com/xai-org/x-algorithm";
   const [sourceResult, readmeResult, commitsResult, weightCommitsResult] = await Promise.allSettled([
     algorithmFetch("https://raw.githubusercontent.com/xai-org/x-algorithm/main/home-mixer/params/param.rs"),
@@ -402,6 +402,17 @@ async function loadAlgorithm(rules, weights, updates) {
     updates.prepend(element("div", "暂时看不到最新更新"));
   }
 
+  changes.replaceChildren();
+  if (weightChanges.length) {
+    changes.append(element("strong", "默认权重变化：" + weightChanges.length + " 项"));
+    weightChanges.forEach((change) => changes.append(element("p", change)));
+  } else if (previousWeightsAvailable) {
+    changes.append(element("strong", "默认权重没有变化"));
+    changes.append(element("p", "与官方权重文件的上一个版本相比，显示的数值相同。"));
+  } else {
+    changes.append(element("strong", "暂时无法对比权重"));
+    changes.append(element("p", "已显示当前数值，但未能读取上一个版本。"));
+  }
   if (previousWeightsAvailable) {
     const summary = element("div");
     summary.className = "xe-algorithm-weight-change-summary";
@@ -430,51 +441,77 @@ function ensureAlgorithmCard() {
     actions.append(algorithmLink("官方代码", "https://github.com/xai-org/x-algorithm/blob/main/home-mixer/params/param.rs"), toggle);
     header.append(element("h2", "X 怎么推荐帖子"), actions);
     const body = element("div");
-    chrome.storage.local.get("algorithmCompact", ({ algorithmCompact = false }) => {
-      const compact = algorithmCompact === true;
-      algorithmCard.classList.toggle("xe-algorithm-compact", compact);
-      toggle.textContent = compact ? "完整显示" : "精简显示";
-      toggle.setAttribute("aria-pressed", String(compact));
-      toggle.disabled = false;
-    });
-    toggle.addEventListener("click", () => {
-      const compact = algorithmCard.classList.toggle("xe-algorithm-compact");
-      toggle.textContent = compact ? "完整显示" : "精简显示";
-      toggle.setAttribute("aria-pressed", String(compact));
-      chrome.storage.local.set({ algorithmCompact: compact });
-    });
     const rulesTitle = element("h3", "X 怎么选帖子");
-    rulesTitle.className = "xe-algorithm-full-only";
     const rules = element("div", "正在读取…");
-    rules.className = "xe-algorithm-full-only";
-    const weightsTitle = element("h3", "哪些行为影响推荐");
-    const weights = element("div", "正在读取…");
-    weights.className = "xe-algorithm-weight-list";
-    const updatesTitle = element("h3", "最近改了什么");
-    const updates = element("div", "正在读取…");
-    updates.className = "xe-algorithm-updates";
     const rulesBlock = element("div");
     rulesBlock.className = "xe-algorithm-block";
-    const explanation = element("p", "X 会预测用户看到帖子后是否会点赞、回复等，再用这些数字参与排序；并不是发生一次就加这么多分。");
-    explanation.className = "xe-algorithm-explanation";
     const guidanceTitle = element("h3", "这对发帖意味着什么");
-    guidanceTitle.className = "xe-algorithm-full-only";
     const guidance = element("ul");
-    guidance.className = "xe-algorithm-full-only";
     [
       "更受重视：用户可能回复、引用、私信分享或复制链接分享；互相关注用户回复原创帖还会获得额外加权。",
       "相对较弱：用户可能只是点赞或普通转发。",
       "明显不利：用户可能选择不感兴趣、静音、屏蔽或举报。"
     ].forEach((item) => guidance.append(element("li", item)));
-    rulesBlock.append(rulesTitle, rules, weightsTitle, explanation, weights, guidanceTitle, guidance);
-    const updatesBlock = element("div");
-    updatesBlock.className = "xe-algorithm-block xe-algorithm-full-only";
-    updatesBlock.append(updatesTitle, updates);
+    rulesBlock.append(rulesTitle, rules, guidanceTitle, guidance);
+
+    const weightsBlock = element("div");
+    weightsBlock.className = "xe-algorithm-block";
+    const weightsTitle = element("h3", "哪些行为影响推荐");
+    const explanation = element("p", "X 会预测用户看到帖子后是否会点赞、回复等，再用这些数字参与排序；并不是发生一次就加这么多分。");
+    explanation.className = "xe-algorithm-explanation";
+    const changes = element("div", "正在对比权重…");
+    changes.className = "xe-algorithm-changes";
+    const weights = element("div", "正在读取…");
+    weights.className = "xe-algorithm-weight-list";
     const note = element("p", "一次举报不等于抵掉几百次点赞。这里显示的是官方默认值，实际推荐还受预测概率、过滤规则和实验设置影响，也算不出真实流量。");
-    note.className = "xe-algorithm-note xe-algorithm-full-only";
-    body.append(rulesBlock, updatesBlock, note);
+    note.className = "xe-algorithm-note";
+    weightsBlock.append(weightsTitle, explanation, changes, weights, note);
+
+    const updatesBlock = element("div");
+    updatesBlock.className = "xe-algorithm-block";
+    updatesBlock.append(element("h3", "最近改了什么"));
+    const updates = element("div", "正在读取…");
+    updates.className = "xe-algorithm-updates";
+    updatesBlock.append(updates);
+
+    const panels = [["规则", rulesBlock], ["权重", weightsBlock], ["更新", updatesBlock]];
+    let selected = weightsBlock;
+    const tabs = element("nav");
+    tabs.className = "xe-algorithm-tabs";
+    tabs.setAttribute("aria-label", "算法信息");
+    function showPanel() {
+      const compact = algorithmCard.classList.contains("xe-algorithm-compact");
+      tabs.hidden = compact;
+      panels.forEach(([, panel], index) => {
+        panel.hidden = compact ? panel !== weightsBlock : panel !== selected;
+        tabs.children[index].setAttribute("aria-pressed", String(panel === selected));
+      });
+      toggle.textContent = compact ? "完整显示" : "精简显示";
+      toggle.setAttribute("aria-pressed", String(compact));
+    }
+    for (const [label, panel] of panels) {
+      const tab = element("button", label);
+      tab.type = "button";
+      tab.addEventListener("click", () => {
+        selected = panel;
+        showPanel();
+      });
+      tabs.append(tab);
+    }
+    body.append(tabs, rulesBlock, weightsBlock, updatesBlock);
     algorithmCard.append(header, body);
-    loadAlgorithm(rules, weights, updates);
+    showPanel();
+    chrome.storage.local.get("algorithmCompact", ({ algorithmCompact = false }) => {
+      algorithmCard.classList.toggle("xe-algorithm-compact", algorithmCompact === true);
+      toggle.disabled = false;
+      showPanel();
+    });
+    toggle.addEventListener("click", () => {
+      const compact = algorithmCard.classList.toggle("xe-algorithm-compact");
+      chrome.storage.local.set({ algorithmCompact: compact });
+      showPanel();
+    });
+    loadAlgorithm(rules, weights, updates, changes);
   }
 
   if (algorithmCard.nextElementSibling !== live) live.before(algorithmCard);
