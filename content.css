@@ -57,7 +57,7 @@
 .xe-algorithm-actions button:hover { text-decoration: underline; }
 .xe-algorithm-compact .xe-algorithm-note { display: none; }
 .xe-algorithm-tabs { display: flex; border-top: 1px solid rgba(128,128,128,.25); }
-.xe-algorithm-tabs button { flex: 1; position: relative; padding: 12px 4px; border: 0; background: transparent; color: #71767b; font: inherit; font-weight: 700; cursor: pointer; }
+.xe-algorithm-tabs button { display: flex; align-items: center; justify-content: center; flex: 1; position: relative; padding: 12px 4px; border: 0; background: transparent; color: #71767b; font: inherit; font-weight: 700; text-align: center; cursor: pointer; }
 .xe-algorithm-tabs button:hover { background: rgba(128,128,128,.12); }
 .xe-algorithm-tabs button[aria-pressed="true"] { color: inherit; }
 .xe-algorithm-tabs button[aria-pressed="true"]::after { content: ""; position: absolute; bottom: 0; left: 25%; width: 50%; height: 4px; border-radius: 999px; background: #1d9bf0; }
