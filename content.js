@@ -279,18 +279,24 @@ function ensureReplyFilter() {
   }
 
   const column = document.querySelector('[data-testid="primaryColumn"]');
-  const original = [...(column?.querySelectorAll('article[data-testid="tweet"]') ?? [])]
-    .find((article) => replyAuthor(article) === route[1].toLowerCase() &&
-      article.querySelector("time")?.closest("a")?.getAttribute("href")?.match(/\/status\/(\d+)/)?.[1] === route[2]);
-  if (!original) return;
-  const editor = column.querySelector('[data-testid="tweetTextarea_0"]');
-  let composerCell = editor?.closest('[data-testid="cellInnerDiv"]');
-  while (composerCell?.parentElement?.closest('[data-testid="cellInnerDiv"]')) {
-    const parentCell = composerCell.parentElement.closest('[data-testid="cellInnerDiv"]');
-    if (parentCell.contains(original)) break;
-    composerCell = parentCell;
+  const tweets = [...(column?.querySelectorAll('article[data-testid="tweet"]') ?? [])];
+  const originalIndex = tweets.findIndex((article) =>
+    article.querySelector("time")?.closest("a")?.getAttribute("href")?.match(/\/status\/(\d+)/)?.[1] === route[2]);
+  if (originalIndex < 0) return;
+  const original = tweets[originalIndex];
+  const rootAuthor = replyAuthor(original) ?? route[1].toLowerCase();
+  const replies = [];
+  for (const article of tweets.slice(originalIndex + 1)) {
+    if (original.contains(article) || article.parentElement?.closest('article[data-testid="tweet"]')) continue;
+    let cell = article.closest('[data-testid="cellInnerDiv"]');
+    while (cell) {
+      const parent = cell.parentElement?.closest('[data-testid="cellInnerDiv"]');
+      if (!parent || parent.contains(original) || parent.querySelectorAll('article[data-testid="tweet"]').length > 1) break;
+      cell = parent;
+    }
+    if (cell && !cell.contains(original) && !replies.some(([node]) => node === cell)) replies.push([cell, article]);
   }
-  if (!composerCell || composerCell.contains(original)) return;
+  if (!replies.length) return;
 
   if (!replyControls) {
     replyControls = element("div");
@@ -330,23 +336,11 @@ function ensureReplyFilter() {
     choices.append(label);
     replyControls.append(choices, element("div", "仅筛选当前已加载的回复；已关注使用 𝕏 搜索"));
   }
-  if (replyControls.previousElementSibling !== composerCell) composerCell.after(replyControls);
+  if (replyControls.nextElementSibling !== replies[0][0]) replies[0][0].before(replyControls);
 
-  const region = composerCell.closest('[role="region"]') ?? column;
-  let afterOriginal = false;
-  for (const cell of region.querySelectorAll('[data-testid="cellInnerDiv"]')) {
-    if (cell === composerCell) {
-      afterOriginal = true;
-      continue;
-    }
-    if (!afterOriginal) continue;
-    const heading = cell.querySelector("h2, [role='heading']");
-    if (heading && /^(?:Discover more|发现更多|更多推荐)$/i.test(heading.textContent.trim())) break;
-    const article = cell.querySelector('article[data-testid="tweet"]');
-    if (!article || article.closest('[data-testid="cellInnerDiv"]') !== cell) continue;
-    const author = replyAuthor(article);
+  for (const [cell, article] of replies) {
     cell.classList.toggle("xe-reply-hidden",
-      (replyMode === "author" && author !== route[1].toLowerCase()) ||
+      (replyMode === "author" && replyAuthor(article) !== rootAuthor) ||
       (hideParodyReplies && isParodyReply(article)));
   }
 }
