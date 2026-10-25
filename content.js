@@ -290,11 +290,25 @@ function ensureReplyFilter() {
   const replies = tweets.slice(index + 1).filter((article) =>
     !original.contains(article) && !article.parentElement?.closest('article[data-testid="tweet"]')
   );
-  if (!replies.length) return;
-  let replyBranch = replies[0];
-  while (replyBranch.parentElement && !replyBranch.parentElement.contains(original)) {
-    replyBranch = replyBranch.parentElement;
+  const composerMarker = [...column.querySelectorAll(
+    '[data-testid="tweetButtonInline"], [data-placeholder], [aria-label], span'
+  )].find((node) => {
+    if (original.contains(node)) return false;
+    const label = node.getAttribute("data-placeholder") ?? node.getAttribute("aria-label") ??
+      (node.children.length ? "" : node.textContent?.trim());
+    return node.getAttribute("data-testid") === "tweetButtonInline" ||
+      /^(发布你的回复|Post your reply)$/i.test(label?.trim() ?? "");
+  });
+  if (!composerMarker) {
+    replyControls?.remove();
+    return;
   }
+  let composerBranch = composerMarker;
+  while (composerBranch.parentElement && !composerBranch.parentElement.contains(original) &&
+    composerBranch.parentElement !== column) {
+    composerBranch = composerBranch.parentElement;
+  }
+  if (!composerBranch.parentElement || composerBranch.contains(original)) return;
 
   if (!replyControls) {
     replyControls = element("div");
@@ -334,7 +348,7 @@ function ensureReplyFilter() {
     choices.append(label);
     replyControls.append(choices, element("div", "仅筛选当前已加载的回复；已关注使用 𝕏 搜索"));
   }
-  if (replyControls.nextElementSibling !== replyBranch) replyBranch.before(replyControls);
+  if (replyControls.previousElementSibling !== composerBranch) composerBranch.after(replyControls);
 
   for (const article of replies) {
     const cell = article.closest('[data-testid="cellInnerDiv"]');
