@@ -287,18 +287,14 @@ function ensureReplyFilter() {
   const original = tweets[index];
   if (!original) return;
   const rootAuthor = replyAuthor(original) ?? route[1].toLowerCase();
-  const replies = [];
-  for (const article of tweets.slice(index + 1)) {
-    if (original.contains(article) || article.parentElement?.closest('article[data-testid="tweet"]')) continue;
-    let cell = article.closest('[data-testid="cellInnerDiv"]');
-    while (cell) {
-      const parent = cell.parentElement?.closest('[data-testid="cellInnerDiv"]');
-      if (!parent || parent.contains(original) || parent.querySelectorAll('article[data-testid="tweet"]').length > 1) break;
-      cell = parent;
-    }
-    if (cell && !cell.contains(original) && !replies.some(([node]) => node === cell)) replies.push([cell, article]);
-  }
+  const replies = tweets.slice(index + 1).filter((article) =>
+    !original.contains(article) && !article.parentElement?.closest('article[data-testid="tweet"]')
+  );
   if (!replies.length) return;
+  let replyBranch = replies[0];
+  while (replyBranch.parentElement && !replyBranch.parentElement.contains(original)) {
+    replyBranch = replyBranch.parentElement;
+  }
 
   if (!replyControls) {
     replyControls = element("div");
@@ -338,10 +334,13 @@ function ensureReplyFilter() {
     choices.append(label);
     replyControls.append(choices, element("div", "仅筛选当前已加载的回复；已关注使用 𝕏 搜索"));
   }
-  if (replyControls.nextElementSibling !== replies[0][0]) replies[0][0].before(replyControls);
+  if (replyControls.nextElementSibling !== replyBranch) replyBranch.before(replyControls);
 
-  for (const [cell, article] of replies) {
-    cell.classList.toggle("xe-reply-hidden",
+  for (const article of replies) {
+    const cell = article.closest('[data-testid="cellInnerDiv"]');
+    const target = cell && !cell.contains(original) &&
+      cell.querySelectorAll('article[data-testid="tweet"]').length === 1 ? cell : article;
+    target.classList.toggle("xe-reply-hidden",
       (replyMode === "author" && replyAuthor(article) !== rootAuthor) ||
       (hideParodyReplies && isParodyReply(article)));
   }
