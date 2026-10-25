@@ -7,6 +7,7 @@ let tabBar = null;
 let wasViewing = false;
 let displayedAccount = null;
 let query = "";
+let historyObserver = null;
 let openedFeedPost = null;
 
 function accountName() {
@@ -67,6 +68,8 @@ function isViewing() {
 }
 
 function clearHistoryLayout() {
+  historyObserver?.disconnect();
+  historyObserver = null;
   viewHost?.classList.remove("xe-history-viewing", "xe-history-host");
   viewAnchor?.classList.remove("xe-history-anchor");
   tabBar?.classList.remove("xe-history-tabs", "xe-viewing");
@@ -150,6 +153,8 @@ async function renderHistory() {
 }
 
 function showRecords(container, records) {
+  historyObserver?.disconnect();
+  historyObserver = null;
   container.replaceChildren();
   const text = query.trim().toLowerCase();
   const filtered = records.filter((record) =>
@@ -162,34 +167,56 @@ function showRecords(container, records) {
     return;
   }
 
-  for (const record of filtered) {
-    const template = element("template");
-    template.innerHTML = record.markup;
-    const tweet = template.content.querySelector('article[data-testid="tweet"]');
-    if (!tweet) continue;
-    tweet.querySelector('[data-testid="reply"]')?.closest('[role="group"]')?.remove();
-    for (const node of tweet.querySelectorAll('[data-testid="caret"], [data-testid*="grok" i], [aria-label*="grok" i]')) {
-      node.closest('button, [role="button"]')?.remove();
+  const sentinel = element("div", "向下滚动加载更多");
+  sentinel.className = "xe-history-more";
+  let next = 0;
+  const loadMore = () => {
+    const end = Math.min(next + 30, filtered.length);
+    for (; next < end; next++) {
+      const record = filtered[next];
+      const template = element("template");
+      template.innerHTML = record.markup;
+      const tweet = template.content.querySelector('article[data-testid="tweet"]');
+      if (!tweet) continue;
+      tweet.querySelector('[data-testid="reply"]')?.closest('[role="group"]')?.remove();
+      for (const node of tweet.querySelectorAll('[data-testid="caret"], [data-testid*="grok" i], [aria-label*="grok" i]')) {
+        node.closest('button, [role="button"]')?.remove();
+      }
+      const entry = element("div");
+      entry.className = "xe-history-entry";
+      tweet.addEventListener("click", (event) => {
+        if (event.target.closest("a[href]")) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        location.assign(record.url);
+      }, true);
+      const info = element("div");
+      info.className = "xe-history-meta";
+      const remove = element("button", "删除历史记录");
+      remove.type = "button";
+      remove.addEventListener("click", async () => {
+        await send({ type: "remove", account: record.account, id: record.id });
+        await renderHistory();
+      });
+      info.append(remove);
+      entry.append(tweet, info);
+      container.append(entry);
     }
-    const entry = element("div");
-    entry.className = "xe-history-entry";
-    tweet.addEventListener("click", (event) => {
-      if (event.target.closest("a[href]")) return;
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      location.assign(record.url);
-    }, true);
-    const info = element("div");
-    info.className = "xe-history-meta";
-    const remove = element("button", "删除历史记录");
-    remove.type = "button";
-    remove.addEventListener("click", async () => {
-      await send({ type: "remove", account: record.account, id: record.id });
-      await renderHistory();
-    });
-    info.append(remove);
-    entry.append(tweet, info);
-    container.append(entry);
+    if (next >= filtered.length) {
+      historyObserver?.disconnect();
+      historyObserver = null;
+      sentinel.remove();
+    } else {
+      container.append(sentinel);
+    }
+  };
+  loadMore();
+  if (next < filtered.length) {
+    const observer = new IntersectionObserver((entries) => {
+      if (historyObserver === observer && isViewing() && entries.some((entry) => entry.isIntersecting)) loadMore();
+    }, { rootMargin: "200px 0px" });
+    historyObserver = observer;
+    observer.observe(sentinel);
   }
 }
 
