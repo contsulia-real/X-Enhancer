@@ -281,12 +281,14 @@ function ensureReplyFilter() {
   const column = document.querySelector('[data-testid="primaryColumn"]');
   const tweets = [...(column?.querySelectorAll('article[data-testid="tweet"]') ?? [])];
   const originalIndex = tweets.findIndex((article) =>
-    article.querySelector("time")?.closest("a")?.getAttribute("href")?.match(/\/status\/(\d+)/)?.[1] === route[2]);
-  if (originalIndex < 0) return;
-  const original = tweets[originalIndex];
+    [...article.querySelectorAll('a[href*="/status/"]')].some((link) =>
+      link.getAttribute("href")?.match(/\/status\/(\d+)/)?.[1] === route[2]));
+  const index = originalIndex >= 0 ? originalIndex : 0;
+  const original = tweets[index];
+  if (!original) return;
   const rootAuthor = replyAuthor(original) ?? route[1].toLowerCase();
   const replies = [];
-  for (const article of tweets.slice(originalIndex + 1)) {
+  for (const article of tweets.slice(index + 1)) {
     if (original.contains(article) || article.parentElement?.closest('article[data-testid="tweet"]')) continue;
     let cell = article.closest('[data-testid="cellInnerDiv"]');
     while (cell) {
