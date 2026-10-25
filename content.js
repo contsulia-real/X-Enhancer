@@ -511,9 +511,11 @@ async function loadAlgorithm(rules, weights, updates) {
 
 function ensureAlgorithmCard() {
   const sidebar = document.querySelector('[data-testid="sidebarColumn"]');
-  const heading = [...(sidebar?.querySelectorAll("h2") ?? [])].find((node) => node.textContent.trim() === "X 上的直播");
+  if (!sidebar) return;
+  const heading = [...sidebar.querySelectorAll("h2")].find((node) => /^(?:X 上的直播|Live on X)$/.test(node.textContent.trim()));
   const live = heading?.parentElement?.parentElement;
-  if (!live) return;
+  const anchor = live ?? sidebar.firstElementChild;
+  if (!anchor) return;
 
   if (!algorithmCard) {
     algorithmCard = element("section");
@@ -589,8 +591,8 @@ function ensureAlgorithmCard() {
     loadAlgorithm(rules, weights, updates);
   }
 
-  if (algorithmCard.nextElementSibling !== live) live.before(algorithmCard);
-  live.classList.add("xe-live-hidden");
+  if (algorithmCard.nextElementSibling !== anchor) anchor.before(algorithmCard);
+  live?.classList.add("xe-live-hidden");
 }
 
 function sync() {
