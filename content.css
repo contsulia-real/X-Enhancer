@@ -80,6 +80,10 @@
 .xe-algorithm a:hover { text-decoration: underline; }
 .xe-algorithm-block { padding: 14px 16px; border-top: 1px solid rgba(128,128,128,.25); }
 .xe-algorithm-block h3:not(:first-child) { margin-top: 18px; }
+.xe-algorithm-summary h4 { margin: 14px 0 6px; font-size: 14px; font-weight: 700; }
+.xe-algorithm-summary h4:first-child { margin-top: 0; }
+.xe-algorithm-summary p { margin: 0; font-size: 13px; line-height: 1.55; overflow-wrap: anywhere; }
+.xe-algorithm-summary > a { display: inline-block; margin-top: 14px; font-size: 12px; }
 .xe-algorithm ul { margin: 0; padding-left: 19px; line-height: 1.6; }
 .xe-algorithm li + li { margin-top: 4px; }
 .xe-algorithm-weights { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 10px 14px; }
