@@ -58,7 +58,7 @@
 .xe-reply-choices label { display: flex; align-items: center; gap: 5px; font-size: 13px; cursor: pointer; }
 .xe-reply-choices input { accent-color: #1d9bf0; }
 .xe-reply-controls > div:last-child { margin-top: 6px; font-size: 12px; color: #71767b; }
-[data-testid="cellInnerDiv"].xe-reply-hidden { display: none !important; }
+.xe-reply-hidden { display: none !important; }
 .xe-algorithm { margin: 16px 0; border: 1px solid rgba(128,128,128,.38); border-radius: 16px; overflow: hidden; color: inherit; font-family: inherit; font-size: 14px; }
 .xe-algorithm-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; }
 .xe-algorithm-actions { display: flex; align-items: center; gap: 12px; flex: none; font-size: 13px; }

@@ -252,13 +252,16 @@ function replyAuthor(article) {
 }
 
 function isParodyReply(article) {
-  const name = article.querySelector('[data-testid="User-Name"]');
-  if (!name) return false;
-  return [...(name.parentElement?.querySelectorAll("*") ?? [])].some((node) => {
-    if (node.closest('[data-testid="tweetText"]')) return false;
-    const label = node.getAttribute("aria-label") ?? node.getAttribute("title") ?? node.getAttribute("alt") ??
-      (node.closest('a[href^="/"]') ? "" : node.children.length === 0 ? node.textContent : "");
-    return /^(?:🎭\s*)?(?:Parody account|戏仿账号|戲仿帳號|パロディアカウント|PCF_LABEL_PARODY)$/i.test(label?.trim() ?? "");
+  const body = article.querySelector('[data-testid="tweetText"]');
+  const parodyLabel = /^(?:🎭\s*)?(?:Parody account|戏仿账号|戲仿帳號|パロディアカウント|PCF_LABEL_PARODY)$/i;
+  return [...article.querySelectorAll("*")].some((node) => {
+    if (node.closest('article[data-testid="tweet"]') !== article ||
+        node.closest('[data-testid="tweetText"], [data-testid="card.wrapper"]') ||
+        (body && (body.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING))) return false;
+    return [
+      node.getAttribute("aria-label"), node.getAttribute("title"), node.getAttribute("alt"),
+      node.childElementCount ? "" : node.textContent
+    ].some((label) => parodyLabel.test(label?.trim() ?? ""));
   });
 }
 
