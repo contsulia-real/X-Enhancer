@@ -401,190 +401,112 @@ function algorithmLink(label, url) {
   return link;
 }
 
-async function loadAlgorithm(rules, weights, updates, changes, explanation, note) {
+function renderAlgorithmVersion(target, mode, section, current, history, sourceUrl) {
+  const view = element("div");
+  view.className = "xe-algorithm-view-" + mode;
+  view.append(element("h4", section.title));
+  const lead = element("p", section.conclusion);
+  lead.className = "xe-algorithm-lead";
+  view.append(lead);
+  const weightMap = new Map((current.weights ?? []).map((weight) => [weight.name, weight]));
+  for (const group of section.sections ?? []) {
+    const block = element("div");
+    block.className = "xe-algorithm-section";
+    block.append(element("h5", group.title));
+    const takeaway = element("p", group.conclusion);
+    takeaway.className = "xe-algorithm-takeaway";
+    block.append(takeaway);
+    if (typeof group.detail === "string" && group.detail) {
+      const detail = element("p", group.detail);
+      detail.className = "xe-algorithm-detail";
+      block.append(detail);
+    }
+    if (group.weight_names?.length) {
+      const grid = element("div");
+      grid.className = "xe-algorithm-weights";
+      for (const name of group.weight_names) {
+        const weight = weightMap.get(name);
+        if (!weight || !Number.isFinite(weight.value)) continue;
+        const row = element("div");
+        row.className = "xe-algorithm-weight";
+        row.append(algorithmLink(weight.label_zh || weight.name, weight.source_url));
+        const value = element("span", String(weight.value));
+        value.className = "xe-algorithm-value " +
+          (weight.value < 0 ? "xe-algorithm-negative" : "xe-algorithm-positive");
+        row.append(value);
+        grid.append(row);
+      }
+      block.append(grid);
+    }
+    view.append(block);
+  }
+
+  if (target === "updates" && history.entries.length) {
+    const records = element("div");
+    records.className = "xe-algorithm-section";
+    records.append(element("h5", mode === "full" ? "版本更新记录" : "最近一次记录"));
+    const entries = mode === "full" ? [...history.entries].reverse() : [history.entries.at(-1)];
+    for (const item of entries) {
+      const record = element("div");
+      record.className = "xe-algorithm-update";
+      record.append(algorithmLink(
+        (item.date || "未知日期") + (item.entry_type === "baseline" ? " · 初始基线" : " · 官方变更"),
+        item.upstream_url));
+      const items = mode === "full" ? item.changes_zh : item.changes_zh?.slice(0, 1);
+      for (const change of items ?? []) record.append(element("p", change));
+      records.append(record);
+    }
+    view.append(records);
+  }
+
+  const link = algorithmLink("查看官方来源", sourceUrl);
+  link.className = "xe-algorithm-source";
+  view.append(link);
+  target === "rules" && view.append(algorithmLink(" · 中文摘要仓库",
+    "https://github.com/contsulia-real/x-algorithm-zh-pilot"));
+  return view;
+}
+
+async function loadAlgorithm(rules, weights, updates) {
   const dataUrl = "https://raw.githubusercontent.com/contsulia-real/x-algorithm-zh-pilot/main/data/";
   const valid = (summary, history) =>
-    summary?.schema_version === 1 && Array.isArray(summary.summary?.weights) &&
-    history?.schema_version === 1 && Array.isArray(history.entries);
+    summary?.schema_version === 1 && history?.schema_version === 1 &&
+    Array.isArray(summary.summary?.weights) && Array.isArray(history.entries) &&
+    ["full", "compact"].every((mode) =>
+      ["rules", "weights", "updates"].every((part) =>
+        typeof summary.presentation?.[mode]?.[part]?.conclusion === "string" &&
+        Array.isArray(summary.presentation[mode][part].sections)));
   let cached;
   try { cached = (await chrome.storage.local.get("algorithmCache")).algorithmCache; } catch {}
-
-  let summary, history, offline = false;
+  let summary, history;
   try {
     if (valid(cached?.summary, cached?.history) && Date.now() - cached.fetchedAt < 3600000) {
       ({ summary, history } = cached);
     } else {
-      const results = await Promise.all(["summary.json", "history.json"].map(async (file) => {
-        const response = await fetch(dataUrl + file);
+      const pair = await Promise.all(["summary.json", "history.json"].map(async (name) => {
+        const response = await fetch(dataUrl + name);
         if (!response.ok) throw new Error("HTTP " + response.status);
         return response.json();
       }));
-      [summary, history] = results;
-      if (!valid(summary, history)) throw new Error("算法摘要格式不受支持");
-      chrome.storage.local.set({ algorithmCache: { summary, history, fetchedAt: Date.now() } }).catch(() => {});
+      [summary, history] = pair;
+      if (!valid(summary, history)) throw new Error("不支持的摘要格式");
+      chrome.storage.local.set({ algorithmCache: { summary, history, fetchedAt: Date.now() } })
+        .catch(() => {});
     }
   } catch {
     if (!valid(cached?.summary, cached?.history)) {
-      rules.textContent = "暂时无法读取中文算法总结";
-      weights.textContent = "暂时无法读取权重";
-      updates.textContent = "暂时无法读取更新记录";
-      changes.textContent = "网络不可用";
-      explanation.textContent = "";
-      note.textContent = "";
+      for (const node of [rules, weights, updates]) node.textContent = "暂时无法读取算法信息";
       return;
     }
     ({ summary, history } = cached);
-    offline = true;
   }
-
-  const current = summary.summary;
-  rules.replaceChildren();
-  for (const [title, value] of [
-    ["推荐流程", current.overview],
-    ["排序机制", current.ranking],
-    ["过滤规则", current.filtering]
-  ]) {
-    if (typeof value !== "string" || !value.trim()) continue;
-    const item = element("div");
-    item.className = "xe-algorithm-highlight";
-    item.append(element("strong", title), element("p", value.split(/[。！？]/)[0] + "。"));
-    rules.append(item);
-  }
-  const fullRules = element("div");
-  fullRules.className = "xe-algorithm-full";
-  for (const [title, value] of [
-    ["推荐流程", current.overview], ["候选来源", current.retrieval],
-    ["排序机制", current.ranking], ["过滤规则", current.filtering],
-    ["公开范围与限制", current.limitations]
-  ]) {
-    if (typeof value !== "string" || !value.trim()) continue;
-    fullRules.append(element("h4", title), element("p", value));
-  }
-  if (fullRules.children.length) {
-    const details = element("details");
-    details.className = "xe-algorithm-details";
-    details.append(element("summary", "展开详细规则"), fullRules);
-    rules.append(details);
-  } else {
-    rules.textContent = "暂无规则总结";
-  }
-  const sources = element("div");
-  sources.className = "xe-algorithm-sources";
-  sources.append(algorithmLink("官方版本", summary.last_processed_url), element("span", " · "),
-    algorithmLink("中文来源", "https://github.com/contsulia-real/x-algorithm-zh-pilot/blob/main/data/summary.json"));
-  rules.append(sources);
-
-  explanation.textContent = current.weight_explanation ?? "";
-  note.textContent = current.limitations ?? "";
-  weights.replaceChildren();
-  const primary = element("div");
-  primary.className = "xe-algorithm-weights";
-  const extra = element("div");
-  extra.className = "xe-algorithm-weights";
-  const compact = element("div");
-  compact.className = "xe-algorithm-weights xe-algorithm-compact-weights";
-  const compactNames = new Set([
-    "FavoriteWeight", "ReplyWeight", "ShareViaCopyLinkWeight", "FollowAuthorWeight",
-    "NotInterestedWeight", "MuteAuthorWeight", "ReportWeight"
-  ]);
-  const mainNames = new Set([
-    "FavoriteWeight", "ReplyWeight", "RetweetWeight", "QuoteWeight", "ShareWeight", "ShareViaDmWeight"
-  ]);
-  const ordered = [
-    ...current.weights.filter((field) => mainNames.has(field?.name)),
-    ...current.weights.filter((field) => !mainNames.has(field?.name))
-  ];
-  for (const [index, field] of ordered.entries()) {
-    if (!field || typeof field.value !== "number" || !Number.isFinite(field.value)) continue;
-    const row = element("div");
-    row.className = "xe-algorithm-weight";
-    row.append(algorithmLink(field.label_zh || field.name,
-      field.source_url || summary.last_processed_url));
-    const amount = element("span", String(field.value));
-    amount.className = "xe-algorithm-value " +
-      (field.value < 0 ? "xe-algorithm-negative" : "xe-algorithm-positive");
-    row.append(amount);
-    if (field.name === "ReplyWeight") {
-      const boost = current.weights.find((item) => item.name === "BidirectionalFollowReplyWeightBoost")?.value;
-      if (typeof boost === "number") {
-        row.append(element("small", "互关回复另加 " + boost +
-          "（合计 " + Number((field.value + boost).toFixed(6)) + "）"));
-      }
-    }
-    (index < 6 ? primary : extra).append(row);
-    if (compactNames.has(field.name)) compact.append(row.cloneNode(true));
-  }
-  if (!primary.children.length) weights.textContent = "暂无权重数据";
-  else {
-    weights.append(primary);
-    if (extra.children.length) {
-      const details = element("details");
-      details.append(element("summary", "展开另外 " + extra.children.length + " 项"), extra);
-      weights.append(details);
-    }
-    weights.append(compact);
-  }
-
-  changes.replaceChildren();
-  const lastWeightUpdate = [...history.entries].reverse()
-    .find((entry) => Array.isArray(entry.weight_changes) && entry.weight_changes.length);
-  if (!lastWeightUpdate) {
-    changes.append(element("strong", "尚无已记录的权重变更"));
-  } else {
-    changes.append(element("strong", "最近权重变化 · " + lastWeightUpdate.date));
-    for (const entry of lastWeightUpdate.weight_changes) {
-      if (typeof entry === "string") {
-        changes.append(element("p", entry));
-      } else if (entry && typeof entry === "object") {
-        const oldValue = entry.old_value ?? entry.old ?? entry.from;
-        const newValue = entry.new_value ?? entry.new ?? entry.to;
-        changes.append(element("p", (entry.label_zh ?? entry.name ?? "权重") +
-          "：" + oldValue + " → " + newValue +
-          (entry.delta === undefined ? "" : "（" + entry.delta + "）")));
-      }
+  for (const [name, node] of [["rules", rules], ["weights", weights], ["updates", updates]]) {
+    node.replaceChildren();
+    for (const mode of ["full", "compact"]) {
+      node.append(renderAlgorithmVersion(name, mode, summary.presentation[mode][name],
+        summary.summary, history, summary.last_processed_url));
     }
   }
-
-  updates.replaceChildren();
-  if (offline) updates.append(element("p", "当前显示缓存内容。"));
-  const entries = [...history.entries].reverse();
-  if (entries.length) {
-    const latest = entries[0];
-    const preview = element("div");
-    preview.className = "xe-algorithm-update xe-algorithm-preview";
-    preview.append(algorithmLink(
-      (latest.date || "未知日期") + (latest.entry_type === "baseline" ? " · 初始总结" : " · 最近更新"),
-      latest.upstream_url));
-    if (latest.changes_zh?.length) preview.append(element("p", latest.changes_zh[0]));
-    updates.append(preview);
-  }
-  if (entries.length || current.notable_updates?.length) {
-    const details = element("details");
-    details.className = "xe-algorithm-details";
-    const full = element("div");
-    full.className = "xe-algorithm-full-updates";
-    for (const entry of entries) {
-      const item = element("div");
-      item.className = "xe-algorithm-update";
-      item.append(algorithmLink(
-        (entry.date || "未知日期") + (entry.entry_type === "baseline" ? " · 初始总结" : " · 更新"),
-        entry.upstream_url));
-      for (const description of entry.changes_zh ?? []) item.append(element("p", description));
-      full.append(item);
-    }
-    if (Array.isArray(current.notable_updates) && current.notable_updates.length) {
-      const official = element("div");
-      official.className = "xe-algorithm-update";
-      official.append(element("h3", "官方重要更新"));
-      const list = element("ul");
-      for (const item of current.notable_updates) list.append(element("li", item));
-      official.append(list);
-      full.append(official);
-    }
-    details.append(element("summary", "查看全部更新"), full);
-    updates.append(details);
-  }
-  if (!updates.children.length) updates.textContent = "暂无更新记录";
 }
 
 function ensureAlgorithmCard() {
@@ -617,18 +539,9 @@ function ensureAlgorithmCard() {
     const weightsBlock = element("div");
     weightsBlock.className = "xe-algorithm-block";
     const weightsTitle = element("h3", "哪些行为影响推荐");
-    const explanation = element("p");
-    explanation.className = "xe-algorithm-explanation";
-    const changes = element("div", "正在对比权重…");
-    changes.className = "xe-algorithm-changes";
     const weights = element("div", "正在读取…");
     weights.className = "xe-algorithm-weight-list";
-    const note = element("p");
-    note.className = "xe-algorithm-note";
-    const info = element("details");
-    info.className = "xe-algorithm-details";
-    info.append(element("summary", "权重说明与局限"), explanation, note);
-    weightsBlock.append(weightsTitle, changes, weights, info);
+    weightsBlock.append(weightsTitle, weights);
 
     const updatesBlock = element("div");
     updatesBlock.className = "xe-algorithm-block";
@@ -644,9 +557,8 @@ function ensureAlgorithmCard() {
     tabs.setAttribute("aria-label", "算法信息");
     function showPanel() {
       const compact = algorithmCard.classList.contains("xe-algorithm-compact");
-      tabs.hidden = compact;
       panels.forEach(([, panel], index) => {
-        panel.hidden = compact ? panel !== weightsBlock : panel !== selected;
+        panel.hidden = panel !== selected;
         tabs.children[index].setAttribute("aria-pressed", String(panel === selected));
       });
       toggle.textContent = compact ? "完整显示" : "精简显示";
@@ -674,7 +586,7 @@ function ensureAlgorithmCard() {
       chrome.storage.local.set({ algorithmCompact: compact });
       showPanel();
     });
-    loadAlgorithm(rules, weights, updates, changes, explanation, note);
+    loadAlgorithm(rules, weights, updates);
   }
 
   if (algorithmCard.nextElementSibling !== live) live.before(algorithmCard);

@@ -62,59 +62,36 @@
 .xe-reply-hidden { display: none !important; }
 .xe-algorithm { margin: 16px 0; border: 1px solid rgba(128,128,128,.38); border-radius: 16px; overflow: hidden; color: inherit; font-family: inherit; font-size: 14px; }
 .xe-algorithm-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; }
+.xe-algorithm h2 { margin: 0; font-size: 20px; font-weight: 800; line-height: 1.4; }
+.xe-algorithm h3 { margin: 0 0 12px; font-size: 15px; font-weight: 800; }
 .xe-algorithm-actions { display: flex; align-items: center; gap: 12px; flex: none; font-size: 13px; }
 .xe-algorithm-actions button { padding: 0; border: 0; background: transparent; color: #1d9bf0; font: inherit; cursor: pointer; }
 .xe-algorithm-actions button:hover { text-decoration: underline; }
-.xe-algorithm-compact .xe-algorithm-note { display: none; }
+.xe-algorithm a { color: #1d9bf0; text-decoration: none; }
+.xe-algorithm a:hover { text-decoration: underline; }
 .xe-algorithm-tabs { display: flex; border-top: 1px solid rgba(128,128,128,.25); }
 .xe-algorithm-tabs button { display: flex; align-items: center; justify-content: center; flex: 1; position: relative; padding: 12px 4px; border: 0; background: transparent; color: #71767b; font: inherit; font-weight: 700; text-align: center; cursor: pointer; }
 .xe-algorithm-tabs button:hover { background: rgba(128,128,128,.12); }
 .xe-algorithm-tabs button[aria-pressed="true"] { color: inherit; }
 .xe-algorithm-tabs button[aria-pressed="true"]::after { content: ""; position: absolute; bottom: 0; left: 25%; width: 50%; height: 4px; border-radius: 999px; background: #1d9bf0; }
-.xe-algorithm-tabs[hidden], .xe-algorithm-block[hidden] { display: none; }
-.xe-algorithm-compact .xe-algorithm-weight-list > .xe-algorithm-weights:not(.xe-algorithm-compact-weights),
-.xe-algorithm-compact .xe-algorithm-weight-list > details { display: none; }
-.xe-algorithm h2 { margin: 0; font-size: 20px; font-weight: 800; line-height: 1.4; }
-.xe-algorithm h3 { margin: 0 0 12px; font-size: 15px; font-weight: 800; }
-.xe-algorithm a { color: #1d9bf0; text-decoration: none; }
-.xe-algorithm a:hover { text-decoration: underline; }
 .xe-algorithm-block { padding: 14px 16px; border-top: 1px solid rgba(128,128,128,.25); }
-.xe-algorithm-block h3:not(:first-child) { margin-top: 18px; }
-.xe-algorithm-summary h4 { margin: 14px 0 6px; font-size: 14px; font-weight: 700; }
-.xe-algorithm-summary h4:first-child { margin-top: 0; }
-.xe-algorithm-summary p { margin: 0; font-size: 13px; line-height: 1.55; overflow-wrap: anywhere; }
-.xe-algorithm-highlight + .xe-algorithm-highlight { margin-top: 12px; }
-.xe-algorithm-highlight strong { display: block; margin-bottom: 3px; font-size: 13px; }
-.xe-algorithm-highlight p, .xe-algorithm-preview p {
-  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
-  overflow: hidden; color: #71767b; line-height: 1.5;
-}
-.xe-algorithm-summary .xe-algorithm-highlight p { margin: 0; }
-.xe-algorithm-sources { margin-top: 12px; font-size: 12px; }
-.xe-algorithm-full { margin-top: 12px; }
-.xe-algorithm-full-updates { display: grid; gap: 12px; margin-top: 12px; }
-.xe-algorithm-details > summary { font-size: 12px; }
-.xe-algorithm-details > .xe-algorithm-explanation { margin-top: 12px; }
-.xe-algorithm ul { margin: 0; padding-left: 19px; line-height: 1.6; }
-.xe-algorithm li + li { margin-top: 4px; }
-.xe-algorithm-weights { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 10px 14px; }
-.xe-algorithm-compact-weights { display: none; }
-.xe-algorithm-compact .xe-algorithm-compact-weights { display: grid; }
-.xe-algorithm-weight { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 13px; }
-.xe-algorithm-weight .xe-algorithm-value { font-size: 16px; font-weight: 700; }
-.xe-algorithm-weight small { color: #71767b; font-size: 12px; }
-.xe-algorithm-changed { padding: 5px 6px; margin: -5px -6px; border-radius: 6px; background: rgba(128,128,128,.13); }
-.xe-algorithm-explanation { margin: 0 0 12px; color: #71767b; font-size: 12px; line-height: 1.5; }
-.xe-algorithm-changes { margin: 0 0 14px; padding: 10px 12px; border-radius: 8px; background: rgba(128,128,128,.14); font-size: 13px; line-height: 1.5; }
-.xe-algorithm-changes strong { display: block; }
-.xe-algorithm-changes p { margin: 4px 0 0; overflow-wrap: anywhere; }
+.xe-algorithm-block[hidden] { display: none; }
+.xe-algorithm-view-compact { display: none; }
+.xe-algorithm-compact .xe-algorithm-view-full { display: none; }
+.xe-algorithm-compact .xe-algorithm-view-compact { display: block; }
+.xe-algorithm h4 { margin: 0 0 8px; font-size: 14px; font-weight: 800; }
+.xe-algorithm-lead { margin: 0 0 14px; line-height: 1.6; font-weight: 650; overflow-wrap: anywhere; }
+.xe-algorithm-section { padding: 12px 0; border-top: 1px solid rgba(128,128,128,.22); }
+.xe-algorithm-section h5 { margin: 0 0 5px; font-size: 13px; font-weight: 750; }
+.xe-algorithm-takeaway { margin: 0; font-size: 13px; line-height: 1.55; overflow-wrap: anywhere; }
+.xe-algorithm-detail { margin: 6px 0 0; color: #71767b; font-size: 12px; line-height: 1.55; overflow-wrap: anywhere; }
+.xe-algorithm-compact .xe-algorithm-section { padding: 9px 0; }
+.xe-algorithm-compact .xe-algorithm-lead { margin-bottom: 10px; }
+.xe-algorithm-weights { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px 12px; margin-top: 12px; }
+.xe-algorithm-weight { display: flex; flex-direction: column; gap: 3px; min-width: 0; font-size: 12px; overflow-wrap: anywhere; }
+.xe-algorithm-value { font-size: 16px; font-weight: 750; }
 .xe-algorithm-positive { color: #00ba7c; }
 .xe-algorithm-negative { color: #f4212e; }
-.xe-algorithm details { margin-top: 12px; }
-.xe-algorithm summary { color: #1d9bf0; cursor: pointer; }
-.xe-algorithm details .xe-algorithm-weights { margin-top: 12px; }
-.xe-algorithm-updates { display: grid; gap: 12px; }
-.xe-algorithm-weight-change-summary { color: #71767b; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
-.xe-algorithm-update { min-width: 0; line-height: 1.4; }
-.xe-algorithm-update p { margin: 4px 0 0; color: #71767b; font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
-.xe-algorithm-note { margin: 14px 0 0; padding: 12px 0 0; border-top: 1px solid rgba(128,128,128,.25); color: #71767b; font-size: 12px; line-height: 1.5; }
+.xe-algorithm-update { margin-top: 10px; line-height: 1.45; }
+.xe-algorithm-update p { margin: 5px 0 0; color: #71767b; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.xe-algorithm-source { display: inline-block; margin-top: 12px; font-size: 12px; }
