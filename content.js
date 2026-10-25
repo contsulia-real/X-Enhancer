@@ -440,19 +440,39 @@ async function loadAlgorithm(rules, weights, updates, changes, explanation, note
   const current = summary.summary;
   rules.replaceChildren();
   for (const [title, value] of [
+    ["推荐流程", current.overview],
+    ["排序机制", current.ranking],
+    ["过滤规则", current.filtering]
+  ]) {
+    if (typeof value !== "string" || !value.trim()) continue;
+    const item = element("div");
+    item.className = "xe-algorithm-highlight";
+    item.append(element("strong", title), element("p", value.split(/[。！？]/)[0] + "。"));
+    rules.append(item);
+  }
+  const fullRules = element("div");
+  fullRules.className = "xe-algorithm-full";
+  for (const [title, value] of [
     ["推荐流程", current.overview], ["候选来源", current.retrieval],
     ["排序机制", current.ranking], ["过滤规则", current.filtering],
     ["公开范围与限制", current.limitations]
   ]) {
     if (typeof value !== "string" || !value.trim()) continue;
-    rules.append(element("h4", title), element("p", value));
+    fullRules.append(element("h4", title), element("p", value));
   }
-  if (!rules.children.length) rules.textContent = "暂无规则总结";
-  if (typeof summary.last_processed_url === "string") {
-    rules.append(algorithmLink("查看对应官方版本", summary.last_processed_url));
+  if (fullRules.children.length) {
+    const details = element("details");
+    details.className = "xe-algorithm-details";
+    details.append(element("summary", "展开详细规则"), fullRules);
+    rules.append(details);
+  } else {
+    rules.textContent = "暂无规则总结";
   }
-  rules.append(element("span", " · "),
-    algorithmLink("中文摘要来源", "https://github.com/contsulia-real/x-algorithm-zh-pilot/blob/main/data/summary.json"));
+  const sources = element("div");
+  sources.className = "xe-algorithm-sources";
+  sources.append(algorithmLink("官方版本", summary.last_processed_url), element("span", " · "),
+    algorithmLink("中文来源", "https://github.com/contsulia-real/x-algorithm-zh-pilot/blob/main/data/summary.json"));
+  rules.append(sources);
 
   explanation.textContent = current.weight_explanation ?? "";
   note.textContent = current.limitations ?? "";
@@ -526,26 +546,43 @@ async function loadAlgorithm(rules, weights, updates, changes, explanation, note
   }
 
   updates.replaceChildren();
-  if (offline) updates.append(element("p", "网络不可用，当前显示上次缓存的内容。"));
-  for (const entry of [...history.entries].reverse().slice(0, 10)) {
-    const item = element("div");
-    item.className = "xe-algorithm-update";
-    item.append(algorithmLink(
-      (entry.date || "未知日期") + (entry.entry_type === "baseline" ? " · 初始总结" : " · 更新"),
-      entry.upstream_url));
-    for (const description of entry.changes_zh ?? []) {
-      item.append(element("p", description));
-    }
-    updates.append(item);
+  if (offline) updates.append(element("p", "当前显示缓存内容。"));
+  const entries = [...history.entries].reverse();
+  if (entries.length) {
+    const latest = entries[0];
+    const preview = element("div");
+    preview.className = "xe-algorithm-update xe-algorithm-preview";
+    preview.append(algorithmLink(
+      (latest.date || "未知日期") + (latest.entry_type === "baseline" ? " · 初始总结" : " · 最近更新"),
+      latest.upstream_url));
+    if (latest.changes_zh?.length) preview.append(element("p", latest.changes_zh[0]));
+    updates.append(preview);
   }
-  if (Array.isArray(current.notable_updates) && current.notable_updates.length) {
-    const official = element("div");
-    official.className = "xe-algorithm-update";
-    official.append(element("h3", "官方重要更新"));
-    const list = element("ul");
-    for (const item of current.notable_updates) list.append(element("li", item));
-    official.append(list);
-    updates.append(official);
+  if (entries.length || current.notable_updates?.length) {
+    const details = element("details");
+    details.className = "xe-algorithm-details";
+    const full = element("div");
+    full.className = "xe-algorithm-full-updates";
+    for (const entry of entries) {
+      const item = element("div");
+      item.className = "xe-algorithm-update";
+      item.append(algorithmLink(
+        (entry.date || "未知日期") + (entry.entry_type === "baseline" ? " · 初始总结" : " · 更新"),
+        entry.upstream_url));
+      for (const description of entry.changes_zh ?? []) item.append(element("p", description));
+      full.append(item);
+    }
+    if (Array.isArray(current.notable_updates) && current.notable_updates.length) {
+      const official = element("div");
+      official.className = "xe-algorithm-update";
+      official.append(element("h3", "官方重要更新"));
+      const list = element("ul");
+      for (const item of current.notable_updates) list.append(element("li", item));
+      official.append(list);
+      full.append(official);
+    }
+    details.append(element("summary", "查看全部更新"), full);
+    updates.append(details);
   }
   if (!updates.children.length) updates.textContent = "暂无更新记录";
 }
@@ -588,7 +625,10 @@ function ensureAlgorithmCard() {
     weights.className = "xe-algorithm-weight-list";
     const note = element("p");
     note.className = "xe-algorithm-note";
-    weightsBlock.append(weightsTitle, explanation, changes, weights, note);
+    const info = element("details");
+    info.className = "xe-algorithm-details";
+    info.append(element("summary", "权重说明与局限"), explanation, note);
+    weightsBlock.append(weightsTitle, changes, weights, info);
 
     const updatesBlock = element("div");
     updatesBlock.className = "xe-algorithm-block";

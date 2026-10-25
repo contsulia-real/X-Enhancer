@@ -83,7 +83,18 @@
 .xe-algorithm-summary h4 { margin: 14px 0 6px; font-size: 14px; font-weight: 700; }
 .xe-algorithm-summary h4:first-child { margin-top: 0; }
 .xe-algorithm-summary p { margin: 0; font-size: 13px; line-height: 1.55; overflow-wrap: anywhere; }
-.xe-algorithm-summary > a { display: inline-block; margin-top: 14px; font-size: 12px; }
+.xe-algorithm-highlight + .xe-algorithm-highlight { margin-top: 12px; }
+.xe-algorithm-highlight strong { display: block; margin-bottom: 3px; font-size: 13px; }
+.xe-algorithm-highlight p, .xe-algorithm-preview p {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+  overflow: hidden; color: #71767b; line-height: 1.5;
+}
+.xe-algorithm-summary .xe-algorithm-highlight p { margin: 0; }
+.xe-algorithm-sources { margin-top: 12px; font-size: 12px; }
+.xe-algorithm-full { margin-top: 12px; }
+.xe-algorithm-full-updates { display: grid; gap: 12px; margin-top: 12px; }
+.xe-algorithm-details > summary { font-size: 12px; }
+.xe-algorithm-details > .xe-algorithm-explanation { margin-top: 12px; }
 .xe-algorithm ul { margin: 0; padding-left: 19px; line-height: 1.6; }
 .xe-algorithm li + li { margin-top: 4px; }
 .xe-algorithm-weights { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 10px 14px; }
