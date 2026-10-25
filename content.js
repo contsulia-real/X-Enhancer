@@ -590,6 +590,7 @@ function ensureAlgorithmCard() {
   }
 
   if (algorithmCard.nextElementSibling !== live) live.before(algorithmCard);
+  live.classList.add("xe-live-hidden");
 }
 
 function sync() {
