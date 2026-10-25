@@ -282,8 +282,15 @@ function ensureReplyFilter() {
   const original = [...(column?.querySelectorAll('article[data-testid="tweet"]') ?? [])]
     .find((article) => replyAuthor(article) === route[1].toLowerCase() &&
       article.querySelector("time")?.closest("a")?.getAttribute("href")?.match(/\/status\/(\d+)/)?.[1] === route[2]);
-  const rootCell = original?.closest('[data-testid="cellInnerDiv"]');
-  if (!rootCell) return;
+  if (!original) return;
+  const editor = column.querySelector('[data-testid="tweetTextarea_0"]');
+  let composerCell = editor?.closest('[data-testid="cellInnerDiv"]');
+  while (composerCell?.parentElement?.closest('[data-testid="cellInnerDiv"]')) {
+    const parentCell = composerCell.parentElement.closest('[data-testid="cellInnerDiv"]');
+    if (parentCell.contains(original)) break;
+    composerCell = parentCell;
+  }
+  if (!composerCell || composerCell.contains(original)) return;
 
   if (!replyControls) {
     replyControls = element("div");
@@ -323,12 +330,12 @@ function ensureReplyFilter() {
     choices.append(label);
     replyControls.append(choices, element("div", "仅筛选当前已加载的回复；已关注使用 𝕏 搜索"));
   }
-  if (replyControls.previousElementSibling !== rootCell) rootCell.after(replyControls);
+  if (replyControls.previousElementSibling !== composerCell) composerCell.after(replyControls);
 
-  const region = rootCell.closest('[role="region"]') ?? column;
+  const region = composerCell.closest('[role="region"]') ?? column;
   let afterOriginal = false;
   for (const cell of region.querySelectorAll('[data-testid="cellInnerDiv"]')) {
-    if (cell === rootCell) {
+    if (cell === composerCell) {
       afterOriginal = true;
       continue;
     }
