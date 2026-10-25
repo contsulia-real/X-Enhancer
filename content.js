@@ -234,6 +234,116 @@ function ensureHistoryTab() {
 }
 
 
+
+let replyControls = null;
+let replyRoute = null;
+let replyMode = "all";
+let hideParodyReplies = false;
+
+function clearReplyFilter() {
+  document.querySelectorAll(".xe-reply-hidden").forEach((cell) => cell.classList.remove("xe-reply-hidden"));
+  replyControls?.remove();
+  replyControls = null;
+}
+
+function replyAuthor(article) {
+  const href = article.querySelector("time")?.closest("a")?.getAttribute("href") ?? "";
+  return href.match(/^\/([^/]+)\/status\/\d+/)?.[1]?.toLowerCase() ?? null;
+}
+
+function isParodyReply(article) {
+  const name = article.querySelector('[data-testid="User-Name"]');
+  if (!name) return false;
+  return [...(name.parentElement?.querySelectorAll("*") ?? [])].some((node) => {
+    if (node.closest('[data-testid="tweetText"]')) return false;
+    const label = node.getAttribute("aria-label") ?? node.getAttribute("title") ?? node.getAttribute("alt") ??
+      (node.closest('a[href^="/"]') ? "" : node.children.length === 0 ? node.textContent : "");
+    return /^(?:🎭\s*)?(?:Parody account|戏仿账号|戲仿帳號|パロディアカウント|PCF_LABEL_PARODY)$/i.test(label?.trim() ?? "");
+  });
+}
+
+function ensureReplyFilter() {
+  const route = location.pathname.match(/^\/([^/]+)\/status\/(\d+)\/?$/);
+  if (!route) {
+    if (replyRoute) clearReplyFilter();
+    replyRoute = null;
+    return;
+  }
+
+  const routeKey = route[1].toLowerCase() + ":" + route[2];
+  if (replyRoute !== routeKey) {
+    clearReplyFilter();
+    replyRoute = routeKey;
+    replyMode = "all";
+    hideParodyReplies = false;
+  }
+
+  const column = document.querySelector('[data-testid="primaryColumn"]');
+  const original = [...(column?.querySelectorAll('article[data-testid="tweet"]') ?? [])]
+    .find((article) => replyAuthor(article) === route[1].toLowerCase() &&
+      article.querySelector("time")?.closest("a")?.getAttribute("href")?.match(/\/status\/(\d+)/)?.[1] === route[2]);
+  const rootCell = original?.closest('[data-testid="cellInnerDiv"]');
+  if (!rootCell) return;
+
+  if (!replyControls) {
+    replyControls = element("div");
+    replyControls.className = "xe-reply-controls";
+    const choices = element("div");
+    choices.className = "xe-reply-choices";
+    const buttons = [];
+    for (const [value, title] of [["all", "全部回复"], ["author", "只看原作者"]]) {
+      const button = element("button", title);
+      button.type = "button";
+      button.addEventListener("click", () => {
+        replyMode = value;
+        buttons.forEach(([mode, node]) => node.setAttribute("aria-pressed", String(mode === value)));
+        ensureReplyFilter();
+      });
+      buttons.push([value, button]);
+      choices.append(button);
+    }
+    buttons[0][1].setAttribute("aria-pressed", "true");
+    buttons[1][1].setAttribute("aria-pressed", "false");
+
+    const follows = element("a", "只看已关注 ↗");
+    follows.href = "https://x.com/search?q=" + encodeURIComponent("conversation_id:" + route[2] + " filter:follows") + "&f=live";
+    follows.target = "_blank";
+    follows.rel = "noopener noreferrer";
+    follows.title = "在 𝕏 搜索中查看你已关注账号的回复（新标签页）";
+    choices.append(follows);
+
+    const label = element("label");
+    const checkbox = element("input");
+    checkbox.type = "checkbox";
+    checkbox.addEventListener("change", () => {
+      hideParodyReplies = checkbox.checked;
+      ensureReplyFilter();
+    });
+    label.append(checkbox, element("span", "隐藏戏仿账号"));
+    choices.append(label);
+    replyControls.append(choices, element("div", "仅筛选当前已加载的回复；已关注使用 𝕏 搜索"));
+  }
+  if (replyControls.previousElementSibling !== rootCell) rootCell.after(replyControls);
+
+  const region = rootCell.closest('[role="region"]') ?? column;
+  let afterOriginal = false;
+  for (const cell of region.querySelectorAll('[data-testid="cellInnerDiv"]')) {
+    if (cell === rootCell) {
+      afterOriginal = true;
+      continue;
+    }
+    if (!afterOriginal) continue;
+    const heading = cell.querySelector("h2, [role='heading']");
+    if (heading && /^(?:Discover more|发现更多|更多推荐)$/i.test(heading.textContent.trim())) break;
+    const article = cell.querySelector('article[data-testid="tweet"]');
+    if (!article || article.closest('[data-testid="cellInnerDiv"]') !== cell) continue;
+    const author = replyAuthor(article);
+    cell.classList.toggle("xe-reply-hidden",
+      (replyMode === "author" && author !== route[1].toLowerCase()) ||
+      (hideParodyReplies && isParodyReply(article)));
+  }
+}
+
 let algorithmCard = null;
 
 function algorithmLink(label, url) {
@@ -517,6 +627,7 @@ function sync() {
   const priorHost = viewHost;
   ensureHistoryTab();
   ensureAlgorithmCard();
+  ensureReplyFilter();
   const viewing = isViewing();
   if (viewing && (!wasViewing || !hadPanel || priorHost !== viewHost || displayedAccount !== accountName())) {
     renderHistory();

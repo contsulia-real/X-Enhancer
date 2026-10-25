@@ -50,6 +50,15 @@
 .xe-history-meta { display: flex; justify-content: flex-end; align-items: center; padding: 4px 16px 8px 68px; gap: 12px; font-size: 12px; color: #71767b; }
 .xe-history-meta button { background: none; border: 0; padding: 4px 0; color: inherit; font: inherit; cursor: pointer; }
 .xe-history-meta button:hover { text-decoration: underline; }
+.xe-reply-controls { padding: 12px 16px; border-top: 1px solid rgba(128,128,128,.25); border-bottom: 1px solid rgba(128,128,128,.25); font: inherit; color: inherit; }
+.xe-reply-choices { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.xe-reply-choices button, .xe-reply-choices a { border: 0; border-radius: 999px; background: rgba(128,128,128,.12); padding: 7px 10px; color: inherit; font: inherit; font-size: 13px; text-decoration: none; cursor: pointer; }
+.xe-reply-choices button[aria-pressed="true"] { background: rgba(29,155,240,.16); color: #1d9bf0; }
+.xe-reply-choices a { color: #1d9bf0; }
+.xe-reply-choices label { display: flex; align-items: center; gap: 5px; font-size: 13px; cursor: pointer; }
+.xe-reply-choices input { accent-color: #1d9bf0; }
+.xe-reply-controls > div:last-child { margin-top: 6px; font-size: 12px; color: #71767b; }
+[data-testid="cellInnerDiv"].xe-reply-hidden { display: none !important; }
 .xe-algorithm { margin: 16px 0; border: 1px solid rgba(128,128,128,.38); border-radius: 16px; overflow: hidden; color: inherit; font-family: inherit; font-size: 14px; }
 .xe-algorithm-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; }
 .xe-algorithm-actions { display: flex; align-items: center; gap: 12px; flex: none; font-size: 13px; }
