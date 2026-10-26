@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "𝕏 Enhancer",
   "version": "0.1.0",
-  "description": "为 𝕏 增加浏览历史、回复筛选和多语言推荐算法摘要。",
+  "description": "为 X 保存本地浏览历史、筛选回复、展示推荐算法资料并隐藏侧栏直播，支持简繁中文、日语、韩语、英语和法语。",
   "permissions": [
     "storage"
   ],
