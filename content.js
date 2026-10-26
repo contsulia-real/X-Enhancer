@@ -309,6 +309,12 @@ function replyAuthor(article) {
   return href.match(/^\/([^/]+)\/status\/\d+/)?.[1]?.toLowerCase() ?? null;
 }
 
+function isBlueVerifiedReply(article) {
+  return [...article.querySelectorAll('[data-testid="User-Name"] svg[data-testid="icon-verified"]')]
+    .some((badge) => badge.closest('article[data-testid="tweet"]') === article &&
+      getComputedStyle(badge).color === "rgb(29, 155, 240)");
+}
+
 function isParodyReply(article) {
   const body = article.querySelector('[data-testid="tweetText"]');
   const parodyLabel = /^(?:🎭\s*)?(?:Parody account|戏仿账号|戲仿帳號|戲仿帳戶|パロディアカウント|패러디\s*계정|Compte parodique|PCF_LABEL_PARODY)$/i;
@@ -377,7 +383,7 @@ function ensureReplyFilter() {
     const choices = element("div");
     choices.className = "xe-reply-choices";
     const buttons = [];
-    for (const [value, title] of [["all", "全部回复"], ["author", "只看原作者"]]) {
+    for (const [value, title] of [["all", "全部回复"], ["author", "只看原作者"], ["blue", "只看蓝V"]]) {
       const button = element("button", title);
       button.type = "button";
       button.addEventListener("click", () => {
@@ -390,6 +396,7 @@ function ensureReplyFilter() {
     }
     buttons[0][1].setAttribute("aria-pressed", "true");
     buttons[1][1].setAttribute("aria-pressed", "false");
+    buttons[2][1].setAttribute("aria-pressed", "false");
 
     const follows = element("a", "只看已关注 ↗");
     follows.href = "https://x.com/search?q=" + encodeURIComponent("conversation_id:" + route[2] + " filter:follows") + "&f=live";
@@ -418,6 +425,7 @@ function ensureReplyFilter() {
       cell.querySelectorAll('article[data-testid="tweet"]').length === 1 ? cell : article;
     target.classList.toggle("xe-reply-hidden",
       (replyMode === "author" && replyAuthor(article) !== rootAuthor) ||
+      (replyMode === "blue" && !isBlueVerifiedReply(article)) ||
       (hideParodyReplies && isParodyReply(article)));
   }
 }
