@@ -23,6 +23,9 @@ function accountName() {
 }
 
 async function send(message) {
+  if (typeof chrome === "undefined" || typeof chrome.runtime?.sendMessage !== "function") {
+    throw new Error("Extension context invalidated");
+  }
   const response = await chrome.runtime.sendMessage(message);
   if (!response?.ok) throw new Error(response?.error ?? xeText("浏览历史操作失败", xeActiveLanguage));
   return response.data;
