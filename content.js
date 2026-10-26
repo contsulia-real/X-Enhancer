@@ -487,7 +487,7 @@ async function loadAlgorithm(rules, weights, updates) {
       ["rules", "weights", "updates"].every((part) =>
         typeof summary.presentation?.[mode]?.[part]?.conclusion === "string" &&
         Array.isArray(summary.presentation[mode][part].sections))) &&
-    ["zh-TW", "zh-HK", "ja", "ko", "en", "fr"].every((lang) =>
+    ["zh-Hant", "ja", "ko", "en", "fr"].every((lang) =>
       summary.localizations?.[lang]?.weight_labels &&
       summary.summary.weights.every((weight) => typeof summary.localizations[lang].weight_labels[weight.name] === "string") &&
       ["full", "compact"].every((mode) => ["rules", "weights", "updates"].every((part) =>
@@ -561,7 +561,7 @@ function syncLanguage() {
 function ensureAlgorithmCard() {
   const sidebar = document.querySelector('[data-testid="sidebarColumn"]');
   if (!sidebar) return;
-  const heading = [...sidebar.querySelectorAll("h2")].find((node) => /^(?:X 上的直播|X 上直播|Live on X|En direct sur X|Direct sur X|Xでライブ配信中|Xでライブ中|X에서 라이브 중|X에서 생방송 중)$/.test(node.textContent.trim()));
+  const heading = [...sidebar.querySelectorAll("h2")].find((node) => /^(?:X 上的直播|X 上直播|Live on X|En direct sur\s+X|Direct sur X|Xでライブ放送する|Xでライブ配信中|Xでライブ中|X에서 라이브 중|X에서 생방송 중)$/.test(node.textContent.trim()));
   const live = heading?.parentElement?.parentElement;
   const anchor = live ?? (sidebar.firstElementChild === algorithmCard
     ? algorithmCard.nextElementSibling : sidebar.firstElementChild);

@@ -3,15 +3,15 @@ const fs = require("node:fs");
 const vm = require("node:vm");
 const { test } = require("node:test");
 
-const langs = ["zh-CN", "zh-TW", "zh-HK", "ja", "ko", "en", "fr"];
+const langs = ["zh-CN", "zh-Hant", "ja", "ko", "en", "fr"];
 
 test("language mapping and complete interface dictionaries", () => {
   const context = vm.createContext({ document: { documentElement: { lang: "en" } } });
   vm.runInContext(fs.readFileSync("i18n.js", "utf8"), context);
   for (const [code, expected] of Object.entries({
     "zh-CN": "zh-CN", "zh-Hans": "zh-CN", "zh-SG": "zh-CN",
-    "zh-TW": "zh-TW", "zh-Hant": "zh-TW",
-    "zh-HK": "zh-HK", "zh-MO": "zh-HK", "zh-Hant-HK": "zh-HK",
+    "zh-TW": "zh-Hant", "zh-Hant": "zh-Hant", "zh-Hant-TW": "zh-Hant",
+    "zh-HK": "zh-Hant", "zh-MO": "zh-Hant", "zh-Hant-HK": "zh-Hant",
     "ja-JP": "ja", "ko-KR": "ko", "en-GB": "en", "fr-CA": "fr",
     "es": "en"
   })) {
@@ -27,8 +27,8 @@ test("language mapping and complete interface dictionaries", () => {
     assert.deepEqual(Object.keys(entries).sort(), [...keys].sort());
     assert(keys.every(key => typeof entries[key] === "string" && entries[key].trim()));
   }
-  assert.notEqual(Object.fromEntries(result["zh-HK"])["𝕏 怎么选帖子"],
-    Object.fromEntries(result["zh-TW"])["𝕏 怎么选帖子"]);
+  assert.equal(Object.keys(result).length, 6);
+  assert(Object.fromEntries(result["zh-Hant"])["𝕏 怎么选帖子"]);
 });
 
 test("switches all three tabs and both views without repeatedly reinserting the card", async () => {
@@ -164,6 +164,31 @@ test("switches all three tabs and both views without repeatedly reinserting the 
   }
   root.lang = "en";
   vm.runInContext("syncLanguage();", context);
+  // Traditional Chinese variants always select the same content and labels.
+  for (const alias of ["zh-TW", "zh-HK", "zh-MO", "zh-Hant-HK"]) {
+    root.lang = alias;
+    vm.runInContext("syncLanguage(); sync();", context);
+    assert(card.textContent.includes("zh-Hant/full/rules"));
+    assert(card.textContent.includes("zh-Hant weight"));
+    assert.equal(moves, initialMoves);
+  }
+  // Check the exact live headings used by the Japanese and French UI.
+  const live = new Node("section");
+  const wrapper = new Node("div");
+  const heading = new Node("h2");
+  wrapper.append(heading); live.append(wrapper); sidebar.append(live);
+  for (const [locale, title] of [["ja", "Xでライブ放送する"], ["fr", "En direct sur\u00a0X"], ["fr", "En direct sur X"]]) {
+    root.lang = locale; heading.textContent = title;
+    vm.runInContext("syncLanguage(); sync();", context);
+    assert(live.classList.contains("xe-live-hidden"), title + " was not hidden");
+    assert.equal(card.nextElementSibling, live);
+    const count = moves;
+    vm.runInContext("sync(); sync();", context);
+    assert.equal(moves, count, title + " moved the card repeatedly");
+  }
+  const movesAfterLive = moves;
+  root.lang = "en";
+  vm.runInContext("syncLanguage();", context);
   const nav = card.children[1].children[0];
   assert.equal(nav.children.length, 3);
   assert.equal(nav.children[0].textContent, "Rules");
@@ -177,5 +202,5 @@ test("switches all three tabs and both views without repeatedly reinserting the 
   vm.runInContext("syncLanguage();", context);
   assert.equal(toggle.textContent, "Vue complète");
   assert.equal(nav.children[0].textContent, "Règles");
-  assert.equal(moves, initialMoves);
+  assert.equal(moves, movesAfterLive);
 });
