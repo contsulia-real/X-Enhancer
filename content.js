@@ -593,7 +593,7 @@ function ensureAlgorithmCard() {
   if (!sidebar) return;
   const heading = [...sidebar.querySelectorAll("h2")].find((node) => /^(?:X 上的直播|X 上直播|Live on X|En direct sur\s+X|Direct sur X|Xでライブ放送する|Xでライブ配信中|Xでライブ中|X에서 라이브 중|X에서 생방송 중)$/.test(node.textContent.trim()));
   const live = heading?.parentElement?.parentElement;
-  const anchor = live ?? (sidebar.firstElementChild === algorithmCard
+  const anchor = live ?? (algorithmCard && sidebar.firstElementChild === algorithmCard
     ? algorithmCard.nextElementSibling : sidebar.firstElementChild);
   if (!anchor) return;
 
