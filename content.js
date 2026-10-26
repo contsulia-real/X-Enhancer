@@ -599,10 +599,24 @@ function syncLanguage() {
 
 function hideSportsCards(sidebar) {
   const leagues = /^(?:NFL|NBA|WNBA|MLB|NHL|NCAA(?:FB|BB)?|MLS|EPL|UCL|F1|Formula 1|Premier League|Champions League|Football|Soccer|Basketball|Baseball|Hockey|Cricket|Rugby|Tennis|Sports|Sports scores|体育赛事|體育賽事|足球|籃球|篮球|棒球|橄榄球|橄欖球|サッカー|野球|バスケットボール|アメリカンフットボール|スポーツ|축구|야구|농구|미식축구|스포츠)$/i;
-  for (const root of sidebar.querySelectorAll(".jetfuel-style-root")) {
-    if (![...root.querySelectorAll(".jf-element, h2, h3")].some((node) =>
-      leagues.test(node.textContent.trim()))) continue;
-    let card = root;
+  const walker = document.createTreeWalker(sidebar, NodeFilter.SHOW_TEXT);
+  while (walker.nextNode()) {
+    if (!leagues.test(walker.currentNode.textContent.trim())) continue;
+    const label = walker.currentNode.parentElement;
+    if (!label || label.closest(".xe-sports-hidden, .xe-algorithm, article, [data-testid='trend']")) continue;
+
+    let card = label.closest(".jetfuel-style-root");
+    if (!card) {
+      for (let node = label; node && node !== sidebar; node = node.parentElement) {
+        const style = getComputedStyle(node);
+        if (style.borderTopStyle !== "none" && parseFloat(style.borderTopWidth) > 0 &&
+          parseFloat(style.borderTopLeftRadius) >= 8 && node.getBoundingClientRect().width >= 180) {
+          card = node;
+          break;
+        }
+      }
+    }
+    if (!card) continue;
     while (card.parentElement && card.parentElement !== sidebar &&
       card.parentElement.children.length === 1) card = card.parentElement;
     card.classList.add("xe-sports-hidden");
