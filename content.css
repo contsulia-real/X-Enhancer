@@ -95,4 +95,4 @@
 .xe-algorithm-update { margin-top: 10px; line-height: 1.45; }
 .xe-algorithm-update p { margin: 5px 0 0; color: #71767b; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
 .xe-algorithm-source { display: inline-block; margin-top: 12px; font-size: 12px; }
-.xe-live-hidden { display: none !important; }
+.xe-live-hidden, .xe-sports-hidden { display: none !important; }

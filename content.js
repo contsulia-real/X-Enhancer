@@ -597,9 +597,22 @@ function syncLanguage() {
   renderAlgorithmData();
 }
 
+function hideSportsCards(sidebar) {
+  const leagues = /^(?:NFL|NBA|WNBA|MLB|NHL|NCAA(?:FB|BB)?|MLS|EPL|UCL|F1|Formula 1|Premier League|Champions League|Football|Soccer|Basketball|Baseball|Hockey|Cricket|Rugby|Tennis|Sports|Sports scores|体育赛事|體育賽事|足球|籃球|篮球|棒球|橄榄球|橄欖球|サッカー|野球|バスケットボール|アメリカンフットボール|スポーツ|축구|야구|농구|미식축구|스포츠)$/i;
+  for (const root of sidebar.querySelectorAll(".jetfuel-style-root")) {
+    if (![...root.querySelectorAll(".jf-element, h2, h3")].some((node) =>
+      leagues.test(node.textContent.trim()))) continue;
+    let card = root;
+    while (card.parentElement && card.parentElement !== sidebar &&
+      card.parentElement.children.length === 1) card = card.parentElement;
+    card.classList.add("xe-sports-hidden");
+  }
+}
+
 function ensureAlgorithmCard() {
   const sidebar = document.querySelector('[data-testid="sidebarColumn"]');
   if (!sidebar) return;
+  hideSportsCards(sidebar);
   const heading = [...sidebar.querySelectorAll("h2")].find((node) => /^(?:X 上的直播|X 上直播|Live on X|En direct sur\s+X|Direct sur X|Xでライブ放送する|Xでライブ配信中|Xでライブ中|X에서 라이브 중|X에서 생방송 중)$/.test(node.textContent.trim()));
   const live = heading?.parentElement?.parentElement;
   const anchor = live ?? (algorithmCard && sidebar.firstElementChild === algorithmCard
