@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "𝕏 Enhancer",
   "version": "0.1.0",
-  "description": "为 𝕏 增加浏览历史、回复筛选和自动更新的推荐算法中文摘要。",
+  "description": "为 𝕏 增加浏览历史、回复筛选和多语言推荐算法摘要。",
   "permissions": [
     "storage"
   ],
@@ -12,6 +12,7 @@
         "https://x.com/*"
       ],
       "js": [
+        "i18n.js",
         "content.js"
       ],
       "css": [

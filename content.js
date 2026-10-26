@@ -9,6 +9,9 @@ let displayedAccount = null;
 let query = "";
 let historyObserver = null;
 let openedFeedPost = null;
+let xeActiveLanguage = xeLocale();
+let algorithmData = null;
+let algorithmNodes = null;
 
 function accountName() {
   const href = document.querySelector(profileSelector)?.getAttribute("href");
@@ -17,7 +20,7 @@ function accountName() {
 
 async function send(message) {
   const response = await chrome.runtime.sendMessage(message);
-  if (!response?.ok) throw new Error(response?.error ?? "浏览历史操作失败");
+  if (!response?.ok) throw new Error(response?.error ?? xeText("浏览历史操作失败", xeActiveLanguage));
   return response.data;
 }
 
@@ -55,7 +58,12 @@ function capturePost() {
 
 function element(tag, content) {
   const node = document.createElement(tag);
-  if (content !== undefined) node.textContent = content;
+  if (content !== undefined) {
+    if (typeof content === "string" && XE_TEXT["zh-CN"][content]) {
+      node.dataset.xeText = content;
+      node.textContent = xeText(content, xeActiveLanguage);
+    } else node.textContent = content;
+  }
   return node;
 }
 
@@ -116,7 +124,8 @@ async function renderHistory() {
   const toolbar = element("div");
   toolbar.className = "xe-history-tools";
   const input = element("input");
-  input.placeholder = "搜索帖子文本或作者";
+  input.dataset.xePlaceholder = "搜索帖子文本或作者";
+  input.placeholder = xeText(input.dataset.xePlaceholder, xeActiveLanguage);
   input.value = query;
   const list = element("div");
   let records = [];
@@ -280,7 +289,7 @@ function replyAuthor(article) {
 
 function isParodyReply(article) {
   const body = article.querySelector('[data-testid="tweetText"]');
-  const parodyLabel = /^(?:🎭\s*)?(?:Parody account|戏仿账号|戲仿帳號|パロディアカウント|PCF_LABEL_PARODY)$/i;
+  const parodyLabel = /^(?:🎭\s*)?(?:Parody account|戏仿账号|戲仿帳號|戲仿帳戶|パロディアカウント|패러디\s*계정|Compte parodique|PCF_LABEL_PARODY)$/i;
   return [...article.querySelectorAll("*")].some((node) => {
     if (node.closest('article[data-testid="tweet"]') !== article ||
         node.closest('[data-testid="tweetText"], [data-testid="card.wrapper"]') ||
@@ -327,7 +336,7 @@ function ensureReplyFilter() {
     const label = node.getAttribute("data-placeholder") ?? node.getAttribute("aria-label") ??
       (node.children.length ? "" : node.textContent?.trim());
     return node.getAttribute("data-testid") === "tweetButtonInline" ||
-      /^(发布你的回复|Post your reply)$/i.test(label?.trim() ?? "");
+      /^(?:发布你的回复|發(?:佈|布|表)(?:你的)?回覆|Post your reply|返信を(?:ポスト|投稿)(?:する)?|답글(?:을)?\s*(?:게시|작성)(?:하세요|하기)?|(?:Publier|Poster) (?:votre|une) réponse|Publiez votre réponse)$/i.test(label?.trim() ?? "");
   });
   if (!composerMarker) {
     replyControls?.remove();
@@ -364,7 +373,8 @@ function ensureReplyFilter() {
     follows.href = "https://x.com/search?q=" + encodeURIComponent("conversation_id:" + route[2] + " filter:follows") + "&f=live";
     follows.target = "_blank";
     follows.rel = "noopener noreferrer";
-    follows.title = "在 𝕏 搜索中查看你已关注账号的回复（新标签页）";
+    follows.dataset.xeTitle = "在 𝕏 搜索中查看你已关注账号的回复（新标签页）";
+    follows.title = xeText(follows.dataset.xeTitle, xeActiveLanguage);
     choices.append(follows);
 
     const label = element("label");
@@ -429,7 +439,7 @@ function renderAlgorithmVersion(target, mode, section, current, history, sourceU
         if (!weight || !Number.isFinite(weight.value)) continue;
         const row = element("div");
         row.className = "xe-algorithm-weight";
-        row.append(algorithmLink(weight.label_zh || weight.name, weight.source_url));
+        row.append(algorithmLink(algorithmData?.summary?.localizations?.[xeActiveLanguage]?.weight_labels?.[weight.name] ?? weight.label_zh ?? weight.name, weight.source_url));
         const value = element("span", String(weight.value));
         value.className = "xe-algorithm-value " +
           (weight.value < 0 ? "xe-algorithm-negative" : "xe-algorithm-positive");
@@ -450,9 +460,10 @@ function renderAlgorithmVersion(target, mode, section, current, history, sourceU
       const record = element("div");
       record.className = "xe-algorithm-update";
       record.append(algorithmLink(
-        (item.date || "未知日期") + (item.entry_type === "baseline" ? " · 初始基线" : " · 官方变更"),
+        (item.date || xeText("未知日期", xeActiveLanguage)) + xeText(item.entry_type === "baseline" ? " · 初始基线" : " · 官方变更", xeActiveLanguage),
         item.upstream_url));
-      const items = mode === "full" ? item.changes_zh : item.changes_zh?.slice(0, 1);
+      const changes = item.changes_i18n?.[xeActiveLanguage] ?? item.changes_zh;
+      const items = mode === "full" ? changes : changes?.slice(0, 1);
       for (const change of items ?? []) record.append(element("p", change));
       records.append(record);
     }
@@ -475,7 +486,14 @@ async function loadAlgorithm(rules, weights, updates) {
     ["full", "compact"].every((mode) =>
       ["rules", "weights", "updates"].every((part) =>
         typeof summary.presentation?.[mode]?.[part]?.conclusion === "string" &&
-        Array.isArray(summary.presentation[mode][part].sections)));
+        Array.isArray(summary.presentation[mode][part].sections))) &&
+    ["zh-TW", "zh-HK", "ja", "ko", "en", "fr"].every((lang) =>
+      summary.localizations?.[lang]?.weight_labels &&
+      summary.summary.weights.every((weight) => typeof summary.localizations[lang].weight_labels[weight.name] === "string") &&
+      ["full", "compact"].every((mode) => ["rules", "weights", "updates"].every((part) =>
+        typeof summary.localizations[lang].presentation?.[mode]?.[part]?.conclusion === "string" &&
+        Array.isArray(summary.localizations[lang].presentation[mode][part].sections))) &&
+      history.entries.every((entry) => Array.isArray(entry.changes_i18n?.[lang])));
   let cached;
   try { cached = (await chrome.storage.local.get("algorithmCache")).algorithmCache; } catch {}
   let summary, history;
@@ -495,24 +513,55 @@ async function loadAlgorithm(rules, weights, updates) {
     }
   } catch {
     if (!valid(cached?.summary, cached?.history)) {
-      for (const node of [rules, weights, updates]) node.textContent = "暂时无法读取算法信息";
+      for (const node of [rules, weights, updates]) {
+        node.dataset.xeText = "暂时无法读取算法信息";
+        node.textContent = xeText(node.dataset.xeText, xeActiveLanguage);
+      }
       return;
     }
     ({ summary, history } = cached);
   }
-  for (const [name, node] of [["rules", rules], ["weights", weights], ["updates", updates]]) {
+  algorithmData = { summary, history };
+  algorithmNodes = { rules, weights, updates };
+  renderAlgorithmData();
+}
+
+function renderAlgorithmData() {
+  if (!algorithmData || !algorithmNodes) return;
+  const { summary, history } = algorithmData;
+  for (const [name, node] of Object.entries(algorithmNodes)) {
     node.replaceChildren();
     for (const mode of ["full", "compact"]) {
-      node.append(renderAlgorithmVersion(name, mode, summary.presentation[mode][name],
+      const localized = summary.localizations?.[xeActiveLanguage]?.presentation?.[mode]?.[name];
+      node.append(renderAlgorithmVersion(name, mode, localized ?? summary.presentation[mode][name],
         summary.summary, history, summary.last_processed_url));
     }
   }
 }
 
+function syncLanguage() {
+  const next = xeLocale();
+  if (next === xeActiveLanguage) return;
+  xeActiveLanguage = next;
+  document.querySelectorAll("[data-xe-text]").forEach(node => {
+    node.textContent = xeText(node.dataset.xeText, next);
+  });
+  document.querySelectorAll("[data-xe-placeholder]").forEach(node => {
+    node.placeholder = xeText(node.dataset.xePlaceholder, next);
+  });
+  document.querySelectorAll("[data-xe-title]").forEach(node => {
+    node.title = xeText(node.dataset.xeTitle, next);
+  });
+  document.querySelectorAll("[data-xe-aria-label]").forEach(node => {
+    node.setAttribute("aria-label", xeText(node.dataset.xeAriaLabel, next));
+  });
+  renderAlgorithmData();
+}
+
 function ensureAlgorithmCard() {
   const sidebar = document.querySelector('[data-testid="sidebarColumn"]');
   if (!sidebar) return;
-  const heading = [...sidebar.querySelectorAll("h2")].find((node) => /^(?:X 上的直播|Live on X)$/.test(node.textContent.trim()));
+  const heading = [...sidebar.querySelectorAll("h2")].find((node) => /^(?:X 上的直播|X 上直播|Live on X|En direct sur X|Direct sur X|Xでライブ配信中|Xでライブ中|X에서 라이브 중|X에서 생방송 중)$/.test(node.textContent.trim()));
   const live = heading?.parentElement?.parentElement;
   const anchor = live ?? (sidebar.firstElementChild === algorithmCard
     ? algorithmCard.nextElementSibling : sidebar.firstElementChild);
@@ -557,14 +606,16 @@ function ensureAlgorithmCard() {
     let selected = weightsBlock;
     const tabs = element("nav");
     tabs.className = "xe-algorithm-tabs";
-    tabs.setAttribute("aria-label", "算法信息");
+    tabs.dataset.xeAriaLabel = "算法信息";
+    tabs.setAttribute("aria-label", xeText(tabs.dataset.xeAriaLabel, xeActiveLanguage));
     function showPanel() {
       const compact = algorithmCard.classList.contains("xe-algorithm-compact");
       panels.forEach(([, panel], index) => {
         panel.hidden = panel !== selected;
         tabs.children[index].setAttribute("aria-pressed", String(panel === selected));
       });
-      toggle.textContent = compact ? "完整显示" : "精简显示";
+      toggle.dataset.xeText = compact ? "完整显示" : "精简显示";
+      toggle.textContent = xeText(toggle.dataset.xeText, xeActiveLanguage);
       toggle.setAttribute("aria-pressed", String(compact));
     }
     for (const [label, panel] of panels) {
@@ -597,6 +648,7 @@ function ensureAlgorithmCard() {
 }
 
 function sync() {
+  syncLanguage();
   capturePost();
   const hadPanel = panel?.isConnected;
   const priorHost = viewHost;
@@ -618,6 +670,7 @@ new MutationObserver(() => {
     sync();
   });
 }).observe(document.documentElement, { childList: true, subtree: true });
+new MutationObserver(syncLanguage).observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
 document.addEventListener("click", (event) => {
   const opened = event.target.closest('article[data-testid="tweet"]');
   if (opened && !opened.closest(".xe-history")) {
