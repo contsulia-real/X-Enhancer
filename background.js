@@ -24,12 +24,15 @@ async function save(record) {
     const existing = store.get(key);
     existing.onsuccess = () => {
       const previous = existing.result;
+      const ids = Array.isArray(previous?.recentVisitIds) ? previous.recentVisitIds : [];
+      if (record.visitId && ids.includes(record.visitId)) return;
       const now = Date.now();
       store.put({
         ...record, key,
         firstOpenedAt: previous?.firstOpenedAt ?? now,
         lastOpenedAt: now,
-        visits: (previous?.visits ?? 0) + 1
+        visits: (previous?.visits ?? 0) + 1,
+        recentVisitIds: record.visitId ? [...ids.slice(-11), record.visitId] : ids
       });
     };
     transaction.oncomplete = () => resolve();

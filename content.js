@@ -1,5 +1,8 @@
 const profileSelector = 'a[data-testid="AppTabBar_Profile_Link"]';
 let activePost = null;
+let postRoute = null;
+const pendingSaves = new Map();
+const postRetryAfter = new Map();
 let panel = null;
 let viewHost = null;
 let viewAnchor = null;
@@ -28,13 +31,18 @@ function capturePost() {
   const match = location.pathname.match(/^\/([^/]+)\/status\/(\d+)\/?$/);
   if (!match) {
     activePost = null;
+    postRoute = null;
     return;
   }
   const account = accountName();
   if (!account) return;
   const id = match[2];
   const key = account + ":" + id;
-  if (activePost === key) return;
+  if (postRoute !== key) {
+    postRoute = key;
+    activePost = null;
+  }
+  if (activePost === key || pendingSaves.has(key) || Date.now() < (postRetryAfter.get(key) ?? 0)) return;
 
   const permalink = "/" + match[1] + "/status/" + id;
   const article = [...document.querySelectorAll('article[data-testid="tweet"]')].find((item) => {
@@ -42,18 +50,32 @@ function capturePost() {
     return href?.replace(/\/$/, "") === permalink;
   });
   if (!article) return;
-  activePost = key;
   const markup = openedFeedPost?.permalink === permalink ? openedFeedPost.html : article.outerHTML;
   openedFeedPost = null;
-  send({
-    type: "save",
-    record: {
-      account, id, author: match[1],
-      text: article.querySelector('[data-testid="tweetText"]')?.innerText ?? "",
-      markup,
-      url: "https://x.com" + permalink
+  const record = {
+    account, id, author: match[1],
+    text: article.querySelector('[data-testid="tweetText"]')?.innerText ?? "",
+    markup, url: "https://x.com" + permalink,
+    visitId: crypto.randomUUID()
+  };
+  const save = (async () => {
+    for (let attempt = 0; attempt < 4; attempt++) {
+      try {
+        await send({ type: "save", record });
+        postRetryAfter.delete(key);
+        if (postRoute === key) activePost = key;
+        return;
+      } catch (error) {
+        if (attempt === 3) {
+          postRetryAfter.set(key, Date.now() + 30000);
+          console.warn("𝕏 Enhancer: could not save post history", error);
+          return;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 300 * 2 ** attempt));
+      }
     }
-  });
+  })().finally(() => pendingSaves.delete(key));
+  pendingSaves.set(key, save);
 }
 
 function element(tag, content) {
@@ -662,13 +684,14 @@ function sync() {
   wasViewing = viewing;
 }
 let scheduled = false;
-new MutationObserver(() => {
-  if (scheduled) return;
+new MutationObserver((mutations) => {
+  if (scheduled || !mutations.some(({ target }) =>
+    !target.closest?.(".xe-algorithm, .xe-history, .xe-reply-controls"))) return;
   scheduled = true;
-  queueMicrotask(() => {
+  setTimeout(() => {
     scheduled = false;
     sync();
-  });
+  }, 150);
 }).observe(document.documentElement, { childList: true, subtree: true });
 new MutationObserver(syncLanguage).observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
 document.addEventListener("click", (event) => {
