@@ -514,7 +514,8 @@ function ensureAlgorithmCard() {
   if (!sidebar) return;
   const heading = [...sidebar.querySelectorAll("h2")].find((node) => /^(?:X 上的直播|Live on X)$/.test(node.textContent.trim()));
   const live = heading?.parentElement?.parentElement;
-  const anchor = live ?? sidebar.firstElementChild;
+  const anchor = live ?? (sidebar.firstElementChild === algorithmCard
+    ? algorithmCard.nextElementSibling : sidebar.firstElementChild);
   if (!anchor) return;
 
   if (!algorithmCard) {
