@@ -3,6 +3,7 @@ let activePost = null;
 let postRoute = null;
 const pendingSaves = new Map();
 const postRetryAfter = new Map();
+let extensionContextInvalidated = false;
 let panel = null;
 let viewHost = null;
 let viewAnchor = null;
@@ -28,6 +29,7 @@ async function send(message) {
 }
 
 function capturePost() {
+  if (extensionContextInvalidated) return;
   const match = location.pathname.match(/^\/([^/]+)\/status\/(\d+)\/?$/);
   if (!match) {
     activePost = null;
@@ -66,6 +68,10 @@ function capturePost() {
         if (postRoute === key) activePost = key;
         return;
       } catch (error) {
+        if (/Extension context invalidated/i.test(String(error))) {
+          extensionContextInvalidated = true;
+          return;
+        }
         if (attempt === 3) {
           postRetryAfter.set(key, Date.now() + 30000);
           console.warn("𝕏 Enhancer: could not save post history", error);
